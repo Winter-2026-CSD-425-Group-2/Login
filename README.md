@@ -1,18 +1,17 @@
-# Simple Web Login Template (HTML, CSS, JS)
+# Simple Web Login Template (HTML, JS)
 
 This template provides a clean, accessible, and responsive front-end login form. It is designed for teaching and quick prototyping, with sensible defaults and clear documentation.
 
 Key goals:
 - Accessibility-first: semantic HTML, labels, focus states, and aria-live feedback.
 - Progressive enhancement: works without JS; improves feedback when JS is enabled.
-- Simplicity: minimal dependencies, straightforward CSS and JS.
+- Simplicity: minimal dependencies, straightforward JS, no included CSS styling.
 
 ---
 
 ## Project Structure
 
 - `index.html` — Semantic markup for the login form with helpful ARIA attributes.
-- `styles.css` — Mobile-first, themable styling with CSS variables and responsive layout.
 - `script.js` — Unobtrusive behavior: password toggling, lightweight validation, and user feedback.
 
 ---
@@ -39,28 +38,6 @@ Rationale and decisions:
 
 Trade-offs:
 - Using `novalidate` ensures consistent styling but bypasses native validation UI. It improves customization at the cost of built-in browser behaviors.
-
----
-
-## styles.css (Design and UX)
-
-Rationale and decisions:
-- CSS variables (`:root`) for color and spacing make theming and maintenance easier.
-- Mobile-first layout: a centered card with a max width ensures it looks good on small screens and scales up.
-- Clear focus styles: an outline and border color change improve keyboard navigation and are visible in both light/dark modes.
-- Error states: `input[aria-invalid="true"]` and `.form__error:empty` allow JS to control visual feedback without adding/removing many classes.
-- Reduced motion: `prefers-reduced-motion` disables transitions for users who prefer minimal animation.
-- Dark mode: `prefers-color-scheme: dark` adjusts palette automatically.
-
-Structure:
-- `.site-main` centers content.
-- `.card` provides a visually distinct container with padding and soft shadow.
-- `.form__field` and modifiers organize fields and layout.
-- `.password-input__toggle` is positioned within the password field for ease of use.
-- `.button` styles the submit action with hover and disabled states.
-
-Trade-offs:
-- Minimal reset avoids opinionated CSS frameworks but may require additional rules for complex projects.
 
 ---
 
@@ -92,7 +69,7 @@ Security notes:
 ## How to Use This Template
 
 - Open `index.html` in your browser to view the form.
-- Customize brand colors by editing CSS variables in `styles.css`.
+- Create a stylesheet in `styles.css`.
 - Replace `action` in `index.html` with your backend endpoint.
 - If you prefer built-in browser validation, remove `novalidate` from the `<form>`.
 - To implement custom submission with JS, uncomment and adapt the `fetch` example in `script.js`.
