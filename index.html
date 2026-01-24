@@ -13,18 +13,18 @@
       require it. If possible, enable JavaScript.
     </noscript>
 
-    <main class="site-main">
-      <section class="card" aria-labelledby="login-title">
-        <h1 id="login-title" class="card__title">Sign in</h1>
-        <p class="card__subtitle">Use your email and password</p>
+    <main >
+      <section  aria-labelledby="login-title">
+        <h1 id="login-title" >Sign in</h1>
+        <p >Use your email and password</p>
 
         <!--
           Template notes:
           - Replace form action with your backend endpoint (e.g., /api/login)
           - Remove novalidate to use native browser validation if preferred
         -->
-        <form id="login-form" class="form" action="/login" method="post" novalidate>
-          <div class="form__field">
+        <form id="login-form"  action="/login" method="post" novalidate>
+          <div >
             <label for="email">Email</label>
             <input
               type="email"
@@ -36,13 +36,13 @@
               aria-invalid="false"
               inputmode="email"
             />
-            <p id="email-help" class="form__help">We'll never share your email.</p>
-            <p id="email-error" class="form__error" role="alert" aria-live="polite"></p>
+            <p id="email-help" >We'll never share your email.</p>
+            <p id="email-error"  role="alert" aria-live="polite"></p>
           </div>
 
-          <div class="form__field">
+          <div >
             <label for="password">Password</label>
-            <div class="password-input">
+            <div >
               <input
                 type="password"
                 id="password"
@@ -55,28 +55,28 @@
               <button
                 type="button"
                 id="toggle-password"
-                class="password-input__toggle"
+                
                 aria-controls="password"
                 aria-label="Show password"
               >Show</button>
             </div>
-            <p id="password-help" class="form__help">At least 8 characters.</p>
-            <p id="password-error" class="form__error" role="alert" aria-live="polite"></p>
+            <p id="password-help" >At least 8 characters.</p>
+            <p id="password-error"  role="alert" aria-live="polite"></p>
           </div>
 
-          <div class="form__field form__field--row">
-            <label class="checkbox">
-              <input type="checkbox" id="remember" name="remember" class="checkbox__input" />
-              <span class="checkbox__label">Remember me</span>
+          <div >
+            <label >
+              <input type="checkbox" id="remember" name="remember"  />
+              <span >Remember me</span>
             </label>
-            <a class="link" href="#" id="forgot-link">Forgot password?</a>
+            <a  href="#" id="forgot-link">Forgot password?</a>
           </div>
 
-          <div class="form__actions">
-            <button type="submit" id="submit-button" class="button">Sign in</button>
+          <div >
+            <button type="submit" id="submit-button" >Sign in</button>
           </div>
 
-          <div id="form-message" class="form__message" role="status" aria-live="polite"></div>
+          <div id="form-message"  role="status" aria-live="polite"></div>
         </form>
       </section>
     </main>
