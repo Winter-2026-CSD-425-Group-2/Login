@@ -13,18 +13,18 @@
       require it. If possible, enable JavaScript.
     </noscript>
 
-    <main >
-      <section  aria-labelledby="login-title">
-        <h1 id="login-title" >Sign in</h1>
-        <p >Use your email and password</p>
+    <main>
+      <section aria-labelledby="login-title">
+        <h1 id="login-title">Sign in</h1>
+        <p>Use your email and password</p>
 
         <!--
           Template notes:
           - Replace form action with your backend endpoint (e.g., /api/login)
           - Remove novalidate to use native browser validation if preferred
         -->
-        <form id="login-form"  action="/login" method="post" novalidate>
-          <div >
+        <form id="login-form" action="/login" method="post" novalidate>
+          <div>
             <label for="email">Email</label>
             <input
               type="email"
@@ -36,13 +36,13 @@
               aria-invalid="false"
               inputmode="email"
             />
-            <p id="email-help" >We'll never share your email.</p>
-            <p id="email-error"  role="alert" aria-live="polite"></p>
+            <p id="email-help">We'll never share your email.</p>
+            <p id="email-error" role="alert" aria-live="polite"></p>
           </div>
 
-          <div >
+          <div>
             <label for="password">Password</label>
-            <div >
+            <div>
               <input
                 type="password"
                 id="password"
@@ -55,28 +55,29 @@
               <button
                 type="button"
                 id="toggle-password"
-                
                 aria-controls="password"
                 aria-label="Show password"
-              >Show</button>
+              >
+                Show
+              </button>
             </div>
-            <p id="password-help" >At least 8 characters.</p>
-            <p id="password-error"  role="alert" aria-live="polite"></p>
+            <p id="password-help">At least 8 characters.</p>
+            <p id="password-error" role="alert" aria-live="polite"></p>
           </div>
 
-          <div >
-            <label >
-              <input type="checkbox" id="remember" name="remember"  />
-              <span >Remember me</span>
+          <div>
+            <label>
+              <input type="checkbox" id="remember" name="remember" />
+              <span>Remember me</span>
             </label>
-            <a  href="#" id="forgot-link">Forgot password?</a>
+            <a href="#" id="forgot-link">Forgot password?</a>
           </div>
 
-          <div >
-            <button type="submit" id="submit-button" >Sign in</button>
+          <div>
+            <button type="submit" id="submit-button">Sign in</button>
           </div>
 
-          <div id="form-message"  role="status" aria-live="polite"></div>
+          <div id="form-message" role="status" aria-live="polite"></div>
         </form>
       </section>
     </main>
