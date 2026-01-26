@@ -3,7 +3,7 @@
 This template provides a clean, accessible, and responsive front-end login form. It is designed for teaching and quick prototyping, with sensible defaults and clear documentation.
 
 Key goals:
-- Accessibility-first: semantic HTML, labels, focus states, and aria-live feedback.
+- Accessibility-first: semantic HTML, and labels.
 - Progressive enhancement: works without JS; improves feedback when JS is enabled.
 - Simplicity: minimal dependencies, straightforward JS, no included CSS styling.
 
@@ -11,7 +11,7 @@ Key goals:
 
 ## Project Structure
 
-- `index.html` — Semantic markup for the login form with helpful ARIA attributes.
+- `index.html` — Semantic markup for the login form.
 - `script.js` — Unobtrusive behavior: password toggling, lightweight validation, and user feedback.
 
 ---
@@ -28,11 +28,6 @@ Rationale and decisions:
   - Email uses `type="email"`, `inputmode="email"`, `autocomplete="email"` for better UX on mobile keyboards and autofill.
   - Password uses `autocomplete="current-password"` to integrate with password managers.
   - `label` elements are associated with inputs via `for`, which is essential for accessibility.
-  - Error and helper messages are connected with `aria-describedby` for context.
-  - `aria-invalid` toggled by JS to communicate validation state to assistive tech.
-- Feedback:
-  - Error messages use `role="alert"` with `aria-live="polite"` to announce changes without being disruptive.
-  - A general `form-message` region with `role="status"` provides non-error feedback (e.g., "Signing in...").
 - Progressive enhancement:
   - The form remains functional without JavaScript (it will submit to the server). With JS, users receive immediate client-side feedback.
 
@@ -48,9 +43,7 @@ Rationale and decisions:
 - Validation:
   - Email: pragmatic regex ensures `user@domain.tld` shape; adequate for client-side checks.
   - Password: minimum length check (8). Stronger policies should be enforced by the server.
-  - Accessibility: `aria-invalid` toggled; error messages in `aria-live` regions are announced to screen readers.
-- Password toggle: button updates text and `aria-label` when switching between Show/Hide to remain accessible.
-- Feedback: disables submit briefly and shows status text to simulate a network request without exposing credentials.
+- Password toggle: button updates text when switching between Show/Hide.
 
 Integration guidance:
 - For real submissions, either:
@@ -80,16 +73,14 @@ Security notes:
 
 - Add username-based login and toggle between email/username.
 - Include a "Remember me" feature backed by server-set cookies; avoid localStorage for sensitive data.
-- Internationalize labels and messages; ensure ARIA attributes remain accurate.
-- Implement a loading spinner with `prefers-reduced-motion` support.
+- Internationalize labels and messages.
 - Add unit tests for validation helpers.
-- Build a registration page with the same pattern (labels, validation, aria-live).
+- Build a registration page with the same pattern (labels, validation).
 
 ---
 
 ## Why These Choices?
 
-- Accessibility and usability are prioritized to teach best practices.
 - The template is intentionally small: students can read and understand all of it quickly.
 - It’s easy to graft onto any stack (Django/Flask, Express, Rails, Spring, etc.) without framework lock-in.
 

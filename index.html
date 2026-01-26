@@ -14,7 +14,7 @@
     </noscript>
 
     <main>
-      <section aria-labelledby="login-title">
+      <section>
         <h1 id="login-title">Sign in</h1>
         <p>Use your email and password</p>
 
@@ -32,12 +32,10 @@
               name="email"
               autocomplete="email"
               required
-              aria-describedby="email-help email-error"
-              aria-invalid="false"
               inputmode="email"
             />
             <p id="email-help">We'll never share your email.</p>
-            <p id="email-error" role="alert" aria-live="polite"></p>
+            <p id="email-error"></p>
           </div>
 
           <div>
@@ -49,20 +47,11 @@
                 name="password"
                 autocomplete="current-password"
                 required
-                aria-describedby="password-help password-error"
-                aria-invalid="false"
               />
-              <button
-                type="button"
-                id="toggle-password"
-                aria-controls="password"
-                aria-label="Show password"
-              >
-                Show
-              </button>
+              <button type="button" id="toggle-password">Show</button>
             </div>
             <p id="password-help">At least 8 characters.</p>
-            <p id="password-error" role="alert" aria-live="polite"></p>
+            <p id="password-error"></p>
           </div>
 
           <div>
@@ -77,7 +66,7 @@
             <button type="submit" id="submit-button">Sign in</button>
           </div>
 
-          <div id="form-message" role="status" aria-live="polite"></div>
+          <div id="form-message"></div>
         </form>
       </section>
     </main>

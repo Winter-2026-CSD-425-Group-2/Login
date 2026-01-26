@@ -4,7 +4,7 @@
   Goals:
   - Accessible password show/hide toggle
   - Lightweight client-side validation (email + password length)
-  - Clear, non-intrusive feedback using aria-live regions
+  - Clear, non-intrusive feedback
   - No credential logging; safe front-end demo
 */
 
@@ -28,12 +28,10 @@
   }
 
   function setError(input, errorEl, message) {
-    input.setAttribute('aria-invalid', 'true');
     errorEl.textContent = message;
   }
 
   function clearError(input, errorEl) {
-    input.setAttribute('aria-invalid', 'false');
     errorEl.textContent = '';
   }
 
@@ -70,7 +68,6 @@
     const hidden = passwordInput.getAttribute('type') === 'password';
     passwordInput.setAttribute('type', hidden ? 'text' : 'password');
     toggleBtn.textContent = hidden ? 'Hide' : 'Show';
-    toggleBtn.setAttribute('aria-label', hidden ? 'Hide password' : 'Show password');
   });
 
   // Validate on type to provide immediate feedback
