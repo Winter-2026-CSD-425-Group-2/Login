@@ -59,3 +59,15 @@ input:focus {
   font-size: 0.9rem;
   cursor: pointer;
 }
+#email-help,
+#password-help {
+  font-size: 0.85rem;
+  color: #555;
+}
+
+#email-error,
+#password-error {
+  font-size: 0.85rem;
+  color: #c00000;
+  min-height: 1em;
+}
