@@ -8,11 +8,6 @@
     <script src="script.js" defer></script>
   </head>
   <body>
-    <noscript>
-      This page works without JavaScript, but enhanced validation and feedback
-      require it. If possible, enable JavaScript.
-    </noscript>
-
     <main>
       <section>
         <h1 id="login-title">Sign in</h1>
@@ -21,9 +16,8 @@
         <!--
           Template notes:
           - Replace form action with your backend endpoint (e.g., /api/login)
-          - Remove novalidate to use native browser validation if preferred
         -->
-        <form id="login-form" action="/login" method="post" novalidate>
+        <form id="login-form" action="/login" method="post">
           <div>
             <label for="email">Email</label>
             <input
@@ -34,7 +28,6 @@
               required
               inputmode="email"
             />
-            <p id="email-error"></p>
           </div>
 
           <div>
@@ -45,12 +38,11 @@
                 id="password"
                 name="password"
                 autocomplete="current-password"
+                minlength="8"
                 required
               />
               <button type="button" id="toggle-password">Show</button>
             </div>
-            <p id="password-help">At least 8 characters.</p>
-            <p id="password-error"></p>
           </div>
 
           <div>
