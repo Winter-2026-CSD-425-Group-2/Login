@@ -14,3 +14,11 @@ main {
   align-items: center;
   justify-content: center;
 }
+section {
+  background-color: #ffffff;
+  padding: 2rem;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
