@@ -27,8 +27,6 @@
     e.preventDefault();
     formMessage.textContent = '';
 
-    if (!okEmail || !okPass) return;
-
     // Prevent repeated submissions in this demo
     submitBtn.disabled = true;
     submitBtn.textContent = 'Signing in...';
