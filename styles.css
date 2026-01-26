@@ -53,3 +53,9 @@ input:focus {
   outline: none;
   border-color: #0066cc;
 }
+#toggle-password {
+  margin-left: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
