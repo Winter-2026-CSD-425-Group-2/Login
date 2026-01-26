@@ -22,3 +22,12 @@ section {
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
+h1 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
