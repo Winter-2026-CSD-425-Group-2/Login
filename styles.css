@@ -4,47 +4,56 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   background-color: #f5f7fa;
   color: #222;
 }
+
 main {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 section {
   background-color: #ffffff;
-  padding: 2rem;
+  padding: 32px;
   width: 100%;
   max-width: 420px;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-h1 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.08);
 }
 
-p {
+h1 {
   margin-top: 0;
-  margin-bottom: 1rem;
+  margin-bottom: 8px;
+  font-size: 24px;
 }
+
+section > p {
+  margin-top: 0;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: #555;
+}
+
 form > div {
-  margin-bottom: 1rem;
+  margin-bottom: 16px;
 }
 
 label {
   display: block;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+  font-size: 14px;
 }
+
 input[type="email"],
 input[type="password"] {
   width: 100%;
-  padding: 0.5rem;
-  font-size: 1rem;
+  padding: 8px;
+  font-size: 16px;
   border: 1px solid #ccc;
   border-radius: 4px;
 }
@@ -53,24 +62,41 @@ input:focus {
   outline: none;
   border-color: #0066cc;
 }
+
+/* Password input + show button */
+form > div:nth-child(2) > div {
+  display: flex;
+  align-items: center;
+}
+
 #toggle-password {
-  margin-left: 0.5rem;
-  padding: 0.4rem 0.6rem;
-  font-size: 0.9rem;
+  margin-left: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  background-color: #eeeeee;
+  border: 1px solid #ccc;
+  border-radius: 4px;
   cursor: pointer;
 }
+
+#toggle-password:hover {
+  background-color: #dddddd;
+}
+
 #email-help,
 #password-help {
-  font-size: 0.85rem;
-  color: #555;
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
 }
 
 #email-error,
 #password-error {
-  font-size: 0.85rem;
+  font-size: 12px;
   color: #c00000;
-  min-height: 1em;
+  min-height: 16px;
 }
+
 form > div:nth-child(3) {
   display: flex;
   align-items: center;
@@ -78,7 +104,7 @@ form > div:nth-child(3) {
 }
 
 a {
-  font-size: 0.9rem;
+  font-size: 13px;
   color: #0066cc;
   text-decoration: none;
 }
@@ -86,23 +112,28 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
 button[type="submit"] {
   width: 100%;
-  padding: 0.6rem;
-  font-size: 1rem;
+  padding: 10px;
+  font-size: 16px;
   background-color: #0066cc;
-  color: #ffffff;
+  color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
 }
 
+button[type="submit"]:hover {
+  background-color: #0052a3;
+}
+
 button[type="submit"]:disabled {
-  background-color: #999;
+  background-color: #999999;
   cursor: not-allowed;
 }
 
 #form-message {
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
+  font-size: 13px;
+  margin-top: 12px;
 }
