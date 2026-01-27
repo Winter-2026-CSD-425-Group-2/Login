@@ -1,9 +1,8 @@
 'use strict';
 /*
-  Simple login template behaviors
+  Simple login demo behaviors
   Goals:
   - Accessible password show/hide toggle
-  - Lightweight client-side validation (email + password length)
   - Clear, non-intrusive feedback
   - No credential logging; safe front-end demo
 */
