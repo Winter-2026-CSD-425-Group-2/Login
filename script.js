@@ -34,7 +34,12 @@
     // Simulate a short network request to show UI feedback
     setTimeout(() => {
       // IMPORTANT: Front-end demo only. Replace with real logic or standard form submit.
-      formMessage.textContent = 'Demo: form is valid. Replace with real submission logic.';
+      if (emailInput.value == "user@example.com" && passwordInput.value == "password") {
+        formMessage.textContent = 'Successfully logged in.';
+      }
+      else {
+        formMessage.textContent = 'Incorrect username or password';
+      }
 
       // Re-enable button after demo completes
       submitBtn.disabled = false;
