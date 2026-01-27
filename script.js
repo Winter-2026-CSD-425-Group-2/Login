@@ -12,9 +12,56 @@
   const form = document.getElementById('login-form');
   const emailInput = document.getElementById('email');
   const passwordInput = document.getElementById('password');
+  const emailError = document.getElementById('email-error');
+  const passwordError = document.getElementById('password-error');
   const formMessage = document.getElementById('form-message');
   const toggleBtn = document.getElementById('toggle-password');
   const submitBtn = document.getElementById('submit-button');
+
+  function isValidEmail(value) {
+    // Simple, pragmatic check: user@domain.tld
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
+  function isValidPassword(value) {
+    return typeof value === 'string' && value.length >= 8;
+  }
+
+  function setError(input, errorEl, message) {
+    errorEl.textContent = message;
+  }
+
+  function clearError(input, errorEl) {
+    errorEl.textContent = '';
+  }
+
+  function validateEmail() {
+    const value = emailInput.value.trim();
+    if (!value) {
+      setError(emailInput, emailError, 'Please enter your email.');
+      return false;
+    }
+    if (!isValidEmail(value)) {
+      setError(emailInput, emailError, 'Please enter a valid email address.');
+      return false;
+    }
+    clearError(emailInput, emailError);
+    return true;
+  }
+
+  function validatePassword() {
+    const value = passwordInput.value;
+    if (!value) {
+      setError(passwordInput, passwordError, 'Please enter your password.');
+      return false;
+    }
+    if (!isValidPassword(value)) {
+      setError(passwordInput, passwordError, 'Your password must be at least 8 characters.');
+      return false;
+    }
+    clearError(passwordInput, passwordError);
+    return true;
+  }
 
   // Toggle password visibility with accessible label updates
   toggleBtn.addEventListener('click', () => {
@@ -23,10 +70,20 @@
     toggleBtn.textContent = hidden ? 'Hide' : 'Show';
   });
 
+  // Validate on type to provide immediate feedback
+  emailInput.addEventListener('input', () => {
+    if (emailInput.value) validateEmail();
+  });
+  passwordInput.addEventListener('input', () => {
+    if (passwordInput.value) validatePassword();
+  });
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     formMessage.textContent = '';
 
+    const okEmail = validateEmail();
+    const okPass = validatePassword();
     if (!okEmail || !okPass) return;
 
     // Prevent repeated submissions in this demo
