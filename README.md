@@ -1,10 +1,18 @@
-# Simple Web Login Demo (HTML, CSS, JS)
+# Simple Web Login Template (HTML, JS)
 
-An accessible front-end login form built for quick prototyping.
+This template provides a clean, accessible, and responsive front-end login form. It is designed for teaching and quick prototyping, with sensible defaults and clear documentation.
 
 Key goals:
 - Accessibility-first: semantic HTML, and labels.
-- Simplicity: minimal dependencies, straightforward JS.
+- Progressive enhancement: works without JS; improves feedback when JS is enabled.
+- Simplicity: minimal dependencies, straightforward JS, no included CSS styling.
+
+---
+
+## Project Structure
+
+- `index.html` — Semantic markup for the login form.
+- `script.js` — Unobtrusive behavior: password toggling, lightweight validation, and user feedback.
 
 ---
 
@@ -14,7 +22,7 @@ Rationale and decisions:
 - Semantic elements: `<main>` groups page content; `<section>` groups the login card; `<h1>` provides page title. Improves screen-reader navigation.
 - Form specifics:
   - `method="post"` to align with secure server-side submissions.
-  - `action="/login"` as a placeholder. Replace with backend route.
+  - `action="/login"` as a placeholder. Replace with your backend route.
 - Inputs:
   - Email uses `type="email"`, `inputmode="email"`, `autocomplete="email"` for better UX on mobile keyboards and autofill.
   - Password uses `autocomplete="current-password"` to integrate with password managers.
@@ -37,17 +45,27 @@ Security notes:
 
 ---
 
-## How to Use
+## How to Use This Template
 
 - Open `index.html` in your browser to view the form.
+- Create a stylesheet in `styles.css`.
 - Replace `action` in `index.html` with your backend endpoint.
 - To implement custom submission with JS, uncomment and adapt the `fetch` example in `script.js`.
 
 ---
 
+## Extensions and Exercises (Educational)
+
+- Add username-based login and toggle between email/username.
+- Include a "Remember me" feature backed by server-set cookies; avoid localStorage for sensitive data.
+- Internationalize labels and messages.
+- Build a registration page with the same pattern (labels, validation).
+
 ---
 
 ## Why These Choices?
 
-- Intentionally small: can be read and understood quickly.
+- The template is intentionally small: students can read and understand all of it quickly.
 - It’s easy to graft onto any stack (Django/Flask, Express, Rails, Spring, etc.) without framework lock-in.
+
+Happy learning and building!
