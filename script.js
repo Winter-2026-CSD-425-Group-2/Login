@@ -18,6 +18,12 @@
   const toggleBtn = document.getElementById('toggle-password');
   const submitBtn = document.getElementById('submit-button');
 
+  // API base URL: set window.API_BASE in index.html for production.
+  // Defaults to localhost for local development.
+  const API_BASE = (typeof window !== 'undefined' && window.API_BASE)
+    ? window.API_BASE
+    : 'http://localhost:5000';
+
   function isValidEmail(value) {
     // Simple, pragmatic check: user@domain.tld
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -78,7 +84,7 @@
     if (passwordInput.value) validatePassword();
   });
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     formMessage.textContent = '';
 
@@ -90,40 +96,37 @@
     submitBtn.disabled = true;
     submitBtn.textContent = 'Signing in...';
 
-    // Simulate a short network request to show UI feedback
-    setTimeout(() => {
-      // IMPORTANT: Front-end demo only. Replace with real logic or standard form submit.
-      if (emailInput.value == "user@example.com" && passwordInput.value == "password") {
-        formMessage.textContent = 'Successfully logged in.';
-      }
-      else {
-        formMessage.textContent = 'Incorrect username or password';
+    try {
+      const res = await fetch(`${API_BASE}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: emailInput.value.trim(),
+          password: passwordInput.value,
+          remember: document.getElementById('remember').checked,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        passwordInput.value = '';
+        setError(passwordInput, passwordError, data?.error || 'Invalid credentials, please try again.');
+        formMessage.textContent = '';
+        return;
       }
 
-      // Re-enable button after demo completes
+      // Success
+      clearError(passwordInput, passwordError);
+      formMessage.textContent = data?.message || 'Successfully logged in.';
+    } catch (err) {
+      passwordInput.value = '';
+      setError(passwordInput, passwordError, 'Network error, please try again.');
+      formMessage.textContent = '';
+    } finally {
+      // Re-enable button after request completes
       submitBtn.disabled = false;
       submitBtn.textContent = 'Sign in';
-
-      // Example integration pattern (commented):
-      // fetch('/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     email: emailInput.value.trim(),
-      //     password: passwordInput.value,
-      //     remember: document.getElementById('remember').checked,
-      //   })
-      // })
-      // .then(async (res) => {
-      //   if (!res.ok) throw new Error('Login failed');
-      //   // Navigate on success
-      //   window.location.assign('/dashboard');
-      // })
-      // .catch((err) => {
-      //   passwordInput.value = '';
-      //   setError(passwordInput, passwordError, 'Invalid credentials, please try again.');
-      //   formMessage.textContent = '';
-      // });
-    }, 800);
+    }
   });
 })();
