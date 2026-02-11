@@ -1,9 +1,11 @@
+const LAMBDA_URL = "https://REPLACE_WITH_LAMBDA_FUNCTION_URL";
+
 function login() {
   const username = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   const message = document.getElementById("message");
 
-  fetch("http://127.0.0.1:5000/login", {
+  fetch(LAMBDA_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
