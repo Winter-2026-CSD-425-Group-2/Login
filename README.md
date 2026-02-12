@@ -21,7 +21,7 @@ These steps use a Lambda Function URL for the simplest possible public endpoint 
 A. Create the Lambda function
 1. Open AWS Console > Lambda > Create function
 2. Author from scratch
-   - Name: login-poc (or any name)
+   - Name: validate-login
    - Runtime: Python 3.11 (or 3.10+)
    - Architecture: x86_64
    - Create function

@@ -1,4 +1,4 @@
-const LAMBDA_URL = "https://REPLACE_WITH_LAMBDA_FUNCTION_URL";
+const LAMBDA_URL = "https://pv3em5olkmfesobe44nkgmzzaa0dlxlc.lambda-url.us-east-2.on.aws/";
 
 function login() {
   const username = document.getElementById("username").value;
