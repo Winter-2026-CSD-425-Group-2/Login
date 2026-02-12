@@ -1,5 +1,4 @@
 import json
-import base64
 
 CORRECT_USERNAME = "student"
 CORRECT_PASSWORD = "1234"
@@ -29,13 +28,8 @@ def lambda_handler(event, context):
         }
 
     try:
-        body = event.get("body") or "{}"
-        if event.get("isBase64Encoded"):
-            body = base64.b64decode(body).decode("utf-8")
-        if isinstance(body, str):
-            data = json.loads(body)
-        else:
-            data = body
+        # Assuming the body is a `str`, and that this `str` contains plain JSON text (not base64-encoded)
+        data = json.loads(event.get("body") or "{}")
 
         username = data.get("username")
         password = data.get("password")
