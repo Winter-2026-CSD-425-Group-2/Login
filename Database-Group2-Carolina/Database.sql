@@ -9,4 +9,5 @@ CREATE TABLE users (
 INSERT INTO users (username, password)
 VALUES ('admin', 'password123'),
     ('test', '12345'),
-    ('user', 'password');
+    ('user', 'password'),
+    ('student', '1234');
