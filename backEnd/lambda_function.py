@@ -7,7 +7,7 @@ CORRECT_PASSWORD = "1234"
 def lambda_handler(event, context):
     # Basic CORS headers for S3-hosted frontend
     headers = {
-        "Access-Control-Allow-Origin": "*",  # For POC; restrict in production
+        "Access-Control-Allow-Origin": "*",  # For simplicity of demo; restrict in production
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
     }
