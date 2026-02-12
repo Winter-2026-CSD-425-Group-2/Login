@@ -7,4 +7,6 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL
 );
 INSERT INTO users (username, password)
-VALUES ('admin', 'password123');
+VALUES ('admin', 'password123'),
+    ('test', '12345'),
+    ('user', 'password');
