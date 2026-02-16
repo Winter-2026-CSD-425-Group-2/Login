@@ -6,7 +6,6 @@ DB_USER = "placeholder"
 DB_PASSWORD = "placeholder"
 DB_NAME = "placeholder"
 
-
 def get_connection():
     return pymysql.connect(
         host=DB_HOST,
@@ -17,53 +16,84 @@ def get_connection():
     )
 
 
+def build_response(status_code, body):
+    return {
+        "statusCode": status_code,
+        "body": json.dumps(body)
+    }
+
+
 def lambda_handler(event, context):
+    path = event.get("rawPath") or event.get("path") or ""
     try:
         data = json.loads(event.get("body", "{}"))
-    except:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"success": False, "message": "Invalid JSON"})
-        }
+    except json.JSONDecodeError:
+        return build_response(400, {
+            "success": False,
+            "message": "Invalid JSON"
+        })
 
-    email = data.get("email")
+    username = data.get("username")
     password = data.get("password")
 
-    if not email or not password:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"success": False, "message": "Missing email or password"})
-        }
+    if not username or not password:
+        return build_response(400, {
+            "success": False,
+            "message": "Missing username or password"
+        })
 
     try:
         conn = get_connection()
 
         with conn.cursor() as cursor:
-            sql = "SELECT password FROM users WHERE email=%s"
-            cursor.execute(sql, (email,))
-            user = cursor.fetchone()
+
+            if path == "/login":
+                sql = "SELECT password FROM users WHERE username=%s"
+                cursor.execute(sql, (username,))
+                user = cursor.fetchone()
+
+                if not user or password != user["password"]:
+                    return build_response(401, {
+                        "success": False,
+                        "message": "Invalid username or password"
+                    })
+
+                return build_response(200, {
+                    "success": True,
+                    "message": "Login successful"
+                })
+
+            elif path == "/signin":
+                check_sql = "SELECT id FROM users WHERE username=%s"
+                cursor.execute(check_sql, (username,))
+                existing_user = cursor.fetchone()
+
+                if existing_user:
+                    return build_response(409, {
+                        "success": False,
+                        "message": "Username already exists"
+                    })
+
+                insert_sql = "INSERT INTO users (username, password) VALUES (%s, %s)"
+                cursor.execute(insert_sql, (username, password))
+                conn.commit()
+
+                return build_response(201, {
+                    "success": True,
+                    "message": "User created successfully"
+                })
+
+            else:
+                return build_response(404, {
+                    "success": False,
+                    "message": "Route not found"
+                })
 
         conn.close()
 
-        if not user:
-            return {
-                "statusCode": 401,
-                "body": json.dumps({"success": False, "message": "Invalid email or password"})
-            }
-
-        if password == user["password"]:
-            return {
-                "statusCode": 200,
-                "body": json.dumps({"success": True, "message": "Login successful"})
-            }
-
-        return {
-            "statusCode": 401,
-            "body": json.dumps({"success": False, "message": "Invalid email or password"})
-        }
-
     except Exception as e:
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"success": False, "error": str(e)})
-        }
+        print("Error:", str(e))
+        return build_response(500, {
+            "success": False,
+            "message": "Server error"
+        })
