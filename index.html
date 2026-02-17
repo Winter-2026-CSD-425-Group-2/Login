@@ -360,30 +360,23 @@
             z-index: 1;
         }
 
-        .demo-credentials {
-            background: linear-gradient(135deg, #b3d9ff 0%, #99ccff 100%);
-            padding: 15px;
-            border-radius: 10px;
+        .signup-link {
+            text-align: center;
             margin-top: 20px;
-            box-shadow: 0 4px 15px rgba(0, 31, 63, 0.3),
-                        inset 0 1px 1px rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(0, 89, 179, 0.3);
-        }
-
-        .demo-credentials h3 {
-            color: #333;
             font-size: 14px;
-            margin-bottom: 8px;
+            color: #666;
         }
 
-        .demo-credentials p {
-            color: #555;
-            font-size: 13px;
-            margin: 4px 0;
+        .signup-link a {
+            color: #003d7a;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
 
-        .demo-credentials strong {
-            color: #333;
+        .signup-link a:hover {
+            color: #0059b3;
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -449,14 +442,8 @@
             <button type="submit" class="login-button">Login</button>
         </form>
 
-        <div class="divider">
-            <span>Demo Credentials</span>
-        </div>
-
-        <div class="demo-credentials">
-            <h3>🔑 Test Account</h3>
-            <p><strong>Username:</strong> admin</p>
-            <p><strong>Password:</strong> password123</p>
+        <div class="signup-link">
+            Don't have an account? <a href="signup.html">Sign up here</a>
         </div>
     </div>
 
@@ -503,7 +490,17 @@
                 return;
             }
 
-            if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+            // Check hardcoded admin credentials
+            let isValidUser = (username === VALID_USERNAME && password === VALID_PASSWORD);
+
+            // If not admin, check registered users from localStorage
+            if (!isValidUser) {
+                const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+                const user = users.find(u => u.username === username && u.password === password);
+                isValidUser = !!user;
+            }
+
+            if (isValidUser) {
                 showSuccess('✓ Login successful! Redirecting...');
                 
                 // Clear form
