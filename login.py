@@ -63,7 +63,7 @@ def lambda_handler(event, context):
                     "message": "Login successful"
                 })
 
-            elif path == "/signin":
+            elif path == "/register":
                 check_sql = "SELECT id FROM users WHERE username=%s"
                 cursor.execute(check_sql, (username,))
                 existing_user = cursor.fetchone()
