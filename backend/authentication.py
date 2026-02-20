@@ -4,7 +4,7 @@ import pymysql
 DB_HOST = "database-group2-carolina.crwamwoa4769.us-east-2.rds.amazonaws.com"
 DB_USER = "admin"
 DB_PASSWORD = "placeholder"
-DB_NAME = "Group2"
+DB_NAME = "user_id"
 
 def get_connection():
     return pymysql.connect(
