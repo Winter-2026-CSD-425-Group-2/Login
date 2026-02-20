@@ -65,11 +65,10 @@ def lambda_handler(event, context):
             "message": "Missing username or password"
         })
 
+    conn = None
     try:
         conn = get_connection()
-
         with conn.cursor() as cursor:
-
             if path == "/login":
                 sql = "SELECT password FROM users WHERE username=%s"
                 cursor.execute(sql, (username,))
@@ -111,12 +110,15 @@ def lambda_handler(event, context):
                     "success": False,
                     "message": "Route not found"
                 })
-
-        conn.close()
-
     except Exception as e:
         print("Error:", str(e))
         return build_response(500, {
             "success": False,
             "message": "Server error"
         })
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception as close_error:
+                print("Error closing DB connection:", str(close_error))
