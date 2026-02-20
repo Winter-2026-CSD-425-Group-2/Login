@@ -66,7 +66,7 @@ D. Enable a public Function URL
   - Auth type: NONE (public). For a real app, use IAM/custom auth.
   - CORS: Enable
     - Allow origins: * (for demo; restrict later)
-    - Allow methods: POST, OPTIONS
+    - Allow methods: POST
     - Allow headers: Content-Type
 - Note the Function URL. It will look like: https://<id>.lambda-url.<region>.on.aws/
 
