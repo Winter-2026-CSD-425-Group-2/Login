@@ -6,13 +6,6 @@ DB_USER = "admin"
 DB_PASSWORD = "placeholder"
 DB_NAME = "Group2"
 
-# Basic CORS headers for S3-hosted frontend
-HEADERS = {
-    "Access-Control-Allow-Origin": "*",  # For simplicity of demo; restrict in production
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-}
-
 def get_connection():
     return pymysql.connect(
         host=DB_HOST,
@@ -26,7 +19,6 @@ def get_connection():
 def build_response(status_code, body):
     return {
         "statusCode": status_code,
-        "headers": HEADERS,
         "body": json.dumps(body)
     }
 
@@ -43,7 +35,6 @@ def lambda_handler(event, context):
     if method == "OPTIONS":
         return {
             "statusCode": 200,
-            "headers": HEADERS,
             "body": "",
         }
 
