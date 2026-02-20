@@ -1,10 +1,10 @@
 import json
 import pymysql
 
-DB_HOST = "placeholder"
-DB_USER = "placeholder"
+DB_HOST = "database-group2-carolina.crwamwoa4769.us-east-2.rds.amazonaws.com"
+DB_USER = "admin"
 DB_PASSWORD = "placeholder"
-DB_NAME = "placeholder"
+DB_NAME = "user_id"
 
 def get_connection():
     return pymysql.connect(
@@ -24,6 +24,20 @@ def build_response(status_code, body):
 
 
 def lambda_handler(event, context):
+    # Determine HTTP method for both API Gateway v1 and Lambda Function URLs (HTTP API v2.0-style)
+    method = (
+        event.get("httpMethod")
+        or event.get("requestContext", {}).get("http", {}).get("method")
+        or ""
+    ).upper()
+
+    # Handle CORS preflight
+    if method == "OPTIONS":
+        return {
+            "statusCode": 200,
+            "body": "",
+        }
+
     path = event.get("rawPath") or event.get("path") or ""
     try:
         data = json.loads(event.get("body", "{}"))
@@ -42,11 +56,10 @@ def lambda_handler(event, context):
             "message": "Missing username or password"
         })
 
+    conn = None
     try:
         conn = get_connection()
-
         with conn.cursor() as cursor:
-
             if path == "/login":
                 sql = "SELECT password FROM users WHERE username=%s"
                 cursor.execute(sql, (username,))
@@ -88,12 +101,15 @@ def lambda_handler(event, context):
                     "success": False,
                     "message": "Route not found"
                 })
-
-        conn.close()
-
     except Exception as e:
         print("Error:", str(e))
         return build_response(500, {
             "success": False,
             "message": "Server error"
         })
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception as close_error:
+                print("Error closing DB connection:", str(close_error))

@@ -1,11 +1,14 @@
-const LAMBDA_URL = "https://pv3em5olkmfesobe44nkgmzzaa0dlxlc.lambda-url.us-east-2.on.aws/";
+const LAMBDA_URL = "https://bgrsmxb6sncxgulfimnep5sz6y0mjbkv.lambda-url.us-east-2.on.aws/";
 
-function login() {
+const login = () => auth("login");
+const register = () => auth("register");
+
+function auth(route) {
   const username = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   const message = document.getElementById("message");
 
-  fetch(LAMBDA_URL, {
+  fetch(`${LAMBDA_URL}${route}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

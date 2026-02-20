@@ -1,100 +1,110 @@
-Minimal AWS Lambda + S3 Login POC
+AWS Lambda + S3 Login Demo (Python 3.14, MySQL via PyMySQL Layer)
 
-This project moves the password validation logic from a local Flask server to an AWS Lambda function. The frontend is a static site you can host on Amazon S3.
+This demo implements a simple username/password flow where authentication is handled by an AWS Lambda function that connects to a MySQL database using PyMySQL. The frontend is a static site hosted on Amazon S3. The Lambda exposes two routes via a Function URL:
+- POST /login
+- POST /register
 
 What you get
-- Backend: AWS Lambda function that validates a hard-coded username/password
-- Frontend: Simple HTML/CSS/JS login form in the Login/ folder
-
-Default credentials (for demo only)
-- username: student
-- password: 1234
+- Backend: Python 3.14 AWS Lambda that connects to MySQL using PyMySQL
+- Frontend: Simple HTML/CSS/JS login page in frontend/
+- Database: Example schema and seed data in database/create_database.sql
 
 Repo structure
-- backEnd/app.py              (old Flask app, no longer needed for this POC)
-- backEnd/lambda_function.py  (Lambda handler)
-- Login/                      (Static frontend)
+- backend/authentication.py   (Lambda handler)
+- frontend/                   (Static frontend: login.html, login.js, style.css)
+- database/create_database.sql
 
-1) Backend: Deploy the Lambda function (Function URL)
-These steps use a Lambda Function URL for the simplest possible public endpoint (no API Gateway setup).
+Prerequisites
+- AWS account with permissions for Lambda, S3, and (optionally) RDS MySQL
+- A reachable MySQL database (Amazon RDS or other), and its endpoint/credentials
+- Lambda runtime: Python 3.14
+
+1) Database: create schema and seed users
+- If you don’t already have a MySQL database, create an RDS MySQL instance and allow your Lambda to reach it (VPC config and security groups as needed).
+- Run database/create_database.sql on your database to create a users table and insert demo users. Note: The script creates a database named user_id. Either:
+  - Change DB_NAME in backend/authentication.py to user_id, or
+  - Modify the SQL to match your chosen database name.
+
+2) Package PyMySQL as a Lambda layer (Python 3.14)
+PyMySQL is not included in the Lambda runtime, so you must attach it via a Lambda layer compatible with Python 3.14.
+
+Build the layer (using a Linux environment, e.g., AWS CloudShell or an x86_64 Linux machine):
+
+mkdir -p layer/python
+pip install --upgrade pip
+pip install --target layer/python pymysql
+cd layer
+zip -r ../pymysql-py3.14-layer.zip .
+
+Create and attach the layer in AWS Console:
+- Lambda > Layers > Create layer
+  - Name: pymysql-py3-14
+  - Upload: pymysql-py3.14-layer.zip
+  - Compatible runtimes: Python 3.14
+  - Compatible architectures: x86_64
+- Open your Lambda function > Layers > Add a layer > Select the newly created layer
+
+3) Backend: deploy the Lambda (Function URL)
+These steps use a Lambda Function URL for the simplest public endpoint (no API Gateway).
 
 A. Create the Lambda function
-1. Open AWS Console > Lambda > Create function
-2. Author from scratch
-   - Name: validate-login
-   - Runtime: Python 3.11 (or 3.10+)
-   - Architecture: x86_64
-   - Create function
+- AWS Console > Lambda > Create function > Author from scratch
+  - Name: login-authentication
+  - Runtime: Python 3.14
+  - Architecture: x86_64
 
 B. Add the code
-1. In the Code tab, create a file named lambda_function.py and paste the contents from backEnd/lambda_function.py in this repo
-2. Deploy the function
+- In the Code tab, replace the default code with the contents of backend/authentication.py in this repo
+- Update DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME near the top of that file to match your database
+- Deploy the function
 
-C. Enable a public Function URL
-1. Lambda > Your function > Function URL > Create function URL
-   - Auth type: NONE (public). For a real app, use IAM/custom auth.
-   - CORS: Enable
-     - Allow origins: * (for POC; restrict later)
-     - Allow methods: POST
-     - Allow headers: Content-Type
-2. Note the Function URL. It will look like: https://<id>.lambda-url.<region>.on.aws/
+C. Attach the PyMySQL layer
+- Lambda > Your function > Layers > Add a layer > Select the layer you created in step 2
 
-D. Test the endpoint (optional)
-Use curl to verify:
+D. Enable a public Function URL
+- Lambda > Your function > Function URL > Create function URL
+  - Auth type: NONE (public). For a real app, use IAM/custom auth.
+  - CORS: Enable
+    - Allow origins: * (for demo; restrict later)
+    - Allow methods: POST
+    - Allow headers: Content-Type
+- Note the Function URL. It will look like: https://<id>.lambda-url.<region>.on.aws/
 
-curl -i -X POST "https://<your-function-url>" \
+E. Test the endpoints
+Use curl to verify the login route (make sure you seeded the database with the demo users or have created your own):
+
+curl -i -X POST "https://<your-function-url>/login" \
   -H "Content-Type: application/json" \
   -d '{"username":"student","password":"1234"}'
 
-You should see HTTP/1.1 200 and a JSON body: {"success": true, "message": "Login successful!"}
+You should see HTTP/1.1 200 with a JSON body like: {"success": true, "message": "Login successful"}
 
-2) Frontend: Deploy to S3 static website hosting
-A. Create an S3 bucket
-1. S3 > Create bucket
-   - Bucket name: unique globally (e.g., my-login-poc-123)
-   - Region: your choice
-   - Uncheck "Block all public access" (for a public demo) and acknowledge the warning
-   - Create bucket
+You can also test registration:
 
-B. Enable static website hosting
-1. Open the bucket > Properties > Static website hosting
-2. Enable
-3. Index document: index.html
-4. Save changes
+curl -i -X POST "https://<your-function-url>/register" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"newuser","password":"newpass"}'
 
-C. Allow public read (demo only)
-1. Open the bucket > Permissions
-2. Bucket policy > Edit. Use a simple public read policy (replace BUCKET_NAME):
+4) Frontend: host on S3
+- Create an S3 bucket and enable static website hosting.
+- For a public demo, allow public read access (bucket policy). Restrict in production.
+- Upload the contents of the frontend/ folder (login.html, login.js, style.css) to the bucket root.
+- Edit frontend/login.js and set LAMBDA_URL to your Function URL (include the trailing slash). Example:
 
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "PublicReadGetObject",
-      "Effect": "Allow",
-      "Principal": "*",
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::BUCKET_NAME/*"
-    }
-  ]
-}
+const LAMBDA_URL = "https://<id>.lambda-url.<region>.on.aws/";
 
-D. Upload the frontend
-1. Upload the contents of the Login/ folder (index.html, script.js, style.css) into the bucket root
+- Open the S3 website endpoint in your browser and try the login form.
 
-E. Point the frontend to your Lambda URL
-1. In S3 (or locally before upload), edit Login/script.js
-2. Replace the placeholder with your function URL:
+Default demo users (from the SQL seed file)
+- student / 1234
+- admin / password123
+- test / 12345
+- user / password
 
-const LAMBDA_URL = "https://REPLACE_WITH_LAMBDA_FUNCTION_URL";
+Notes and troubleshooting
+- PyMySQL import errors: Ensure the layer zip has a top-level folder named python and that the layer is created for Python 3.14 and attached to the function.
+- Database connectivity: Verify security groups, subnets/VPC settings (if your Lambda runs in a VPC), and that DB_HOST/DB_USER/DB_PASSWORD/DB_NAME are correct. Check CloudWatch logs for errors.
+- 404 Route not found: Call the Function URL with /login or /register (the base URL alone will return 404).
+- CORS: OPTIONS is handled by the function. Ensure Function URL CORS allows POST and Content-Type: application/json.
+- Security: Do not hard-code secrets for production; use AWS Secrets Manager or environment variables, restrict CORS, and prefer API Gateway + IAM/authorizers over a public Function URL.
 
-Set it to the exact Function URL from step 1C (keep the trailing slash if present).
-
-F. Open your site
-1. In the bucket > Properties > Static website hosting, copy the Website endpoint
-2. Open it in your browser, try the login form
-
-Notes
-- The old Flask server (backEnd/app.py) is no longer required for this POC.
-- For production, DO NOT use hard-coded credentials or public Function URLs. Add authentication, secrets management, rate limiting, and restrict CORS to your exact S3/CloudFront origin.
-- You can put CloudFront in front of the S3 site and the Lambda URL for better controls and TLS/URL consistency.
