@@ -1,10 +1,17 @@
 import json
 import pymysql
 
-DB_HOST = "placeholder"
-DB_USER = "placeholder"
+DB_HOST = "database-group2-carolina.crwamwoa4769.us-east-2.rds.amazonaws.com"
+DB_USER = "admin"
 DB_PASSWORD = "placeholder"
-DB_NAME = "placeholder"
+DB_NAME = "Group2"
+
+# Basic CORS headers for S3-hosted frontend
+HEADERS = {
+    "Access-Control-Allow-Origin": "*",  # For simplicity of demo; restrict in production
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+}
 
 def get_connection():
     return pymysql.connect(
@@ -19,11 +26,27 @@ def get_connection():
 def build_response(status_code, body):
     return {
         "statusCode": status_code,
+        "headers": HEADERS,
         "body": json.dumps(body)
     }
 
 
 def lambda_handler(event, context):
+    # Determine HTTP method for both API Gateway v1 and Lambda Function URLs (HTTP API v2.0-style)
+    method = (
+        event.get("httpMethod")
+        or event.get("requestContext", {}).get("http", {}).get("method")
+        or ""
+    ).upper()
+
+    # Handle CORS preflight
+    if method == "OPTIONS":
+        return {
+            "statusCode": 200,
+            "headers": HEADERS,
+            "body": "",
+        }
+
     path = event.get("rawPath") or event.get("path") or ""
     try:
         data = json.loads(event.get("body", "{}"))
