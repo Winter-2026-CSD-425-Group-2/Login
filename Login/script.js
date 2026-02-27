@@ -3,7 +3,7 @@ function login() {
   const password = document.getElementById("password").value;
   const message = document.getElementById("message");
 
-  fetch("http://127.0.0.1:5000/login", {
+  fetch("https://i95yozr8u1.execute-api.us-east-1.amazonaws.com/prod/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

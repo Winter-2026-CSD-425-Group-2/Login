@@ -1,0 +1,21 @@
+<h2>Verify OTP</h2>
+<input id="email" placeholder="Email">
+<input id="otp" placeholder="Enter OTP">
+<button onclick="verify()">Verify</button>
+<p id="message"></p>
+
+<script>
+async function verify() {
+  const response = await fetch("https://YOUR_API_URL/verify", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      email: email.value,
+      otp: otp.value
+    })
+  });
+
+  const data = await response.json();
+  message.innerText = data.message;
+}
+</script>
