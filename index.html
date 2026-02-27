@@ -442,21 +442,93 @@
             <button type="submit" class="login-button">Login</button>
         </form>
 
+        <form id="verifyForm" style="display: none; margin-top: 16px;">
+            <div class="form-group">
+                <label for="verificationCode">Verification Code</label>
+                <div class="input-wrapper">
+                    <input type="text" id="verificationCode" name="verificationCode" placeholder="Enter the 6-digit code" maxlength="6" required>
+                </div>
+            </div>
+            <button type="submit" class="login-button">Verify & Complete Login</button>
+        </form>
+
         <div class="signup-link">
             Don't have an account? <a href="signup.html">Sign up here</a>
         </div>
     </div>
 
     <script>
-        // Hardcoded credentials
-        const VALID_USERNAME = 'admin';
-        const VALID_PASSWORD = 'password123';
+        const VERIFICATION_CODE_KEY = 'pending2FA';
 
         const loginForm = document.getElementById('loginForm');
+        const verifyForm = document.getElementById('verifyForm');
         const usernameInput = document.getElementById('username');
         const passwordInput = document.getElementById('password');
+        const verificationCodeInput = document.getElementById('verificationCode');
+        const loginButton = loginForm.querySelector('button[type="submit"]');
         const errorMessage = document.getElementById('errorMessage');
         const successMessage = document.getElementById('successMessage');
+
+        const mockLambdaApi = {
+            async invoke(route, payload) {
+                if (route === '/login') {
+                    const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+                    const user = users.find(savedUser => savedUser.username === payload.username && savedUser.password === payload.password);
+
+                    if (!user) {
+                        throw new Error('Invalid username or password!');
+                    }
+
+                    if (!user.email) {
+                        throw new Error('This account does not have an email for verification. Please register again.');
+                    }
+
+                    const existingPending = JSON.parse(localStorage.getItem(VERIFICATION_CODE_KEY) || 'null');
+                    if (
+                        existingPending &&
+                        existingPending.username === user.username &&
+                        Date.now() <= existingPending.expiresAt
+                    ) {
+                        return { message: 'A verification code is already active', username: user.username, reused: true };
+                    }
+
+                    const code = String(Math.floor(100000 + Math.random() * 900000));
+                    const expiresAt = Date.now() + (5 * 60 * 1000);
+
+                    localStorage.setItem(VERIFICATION_CODE_KEY, JSON.stringify({
+                        username: user.username,
+                        email: user.email,
+                        code,
+                        expiresAt
+                    }));
+
+                    return { message: 'Verification code generated', username: user.username, email: user.email, code, expiresAt };
+                }
+
+                if (route === '/verify-otp') {
+                    const pendingVerification = JSON.parse(localStorage.getItem(VERIFICATION_CODE_KEY) || 'null');
+
+                    if (!pendingVerification) {
+                        throw new Error('No pending verification code found. Please login again.');
+                    }
+
+                    if (Date.now() > pendingVerification.expiresAt) {
+                        localStorage.removeItem(VERIFICATION_CODE_KEY);
+                        throw new Error('Verification code expired. Please login again to get a new code.');
+                    }
+
+                    if (pendingVerification.username !== payload.username || String(payload.code).trim() !== pendingVerification.code) {
+                        throw new Error('Invalid verification code!');
+                    }
+
+                    localStorage.setItem('loggedInUser', pendingVerification.username);
+                    localStorage.removeItem(VERIFICATION_CODE_KEY);
+                    return { message: '2FA verified', username: pendingVerification.username };
+                }
+
+                throw new Error('Route not implemented in mock Lambda');
+            }
+        };
 
         // Function to show error message
         function showError(message) {
@@ -477,8 +549,26 @@
             errorMessage.style.display = 'none';
         }
 
+        function generateVerificationCode() {
+            return String(Math.floor(100000 + Math.random() * 900000));
+        }
+
+        function sendVerificationCodeByEmail(email, code) {
+            const subject = encodeURIComponent('Your Group2 Login Verification Code');
+            const body = encodeURIComponent(`Your verification code is ${code}. This code expires in 5 minutes.`);
+            window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+        }
+
+        function setLoginFormEnabled(enabled) {
+            usernameInput.disabled = !enabled;
+            passwordInput.disabled = !enabled;
+            loginButton.disabled = !enabled;
+            loginButton.style.opacity = enabled ? '1' : '0.7';
+            loginButton.style.cursor = enabled ? 'pointer' : 'not-allowed';
+        }
+
         // Handle form submission
-        loginForm.addEventListener('submit', function(e) {
+        loginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const username = usernameInput.value.trim();
@@ -490,32 +580,49 @@
                 return;
             }
 
-            // Check hardcoded admin credentials
-            let isValidUser = (username === VALID_USERNAME && password === VALID_PASSWORD);
+            try {
+                const result = await mockLambdaApi.invoke('/login', { username, password });
+                verifyForm.style.display = 'block';
+                setLoginFormEnabled(false);
+                verificationCodeInput.focus();
 
-            // If not admin, check registered users from localStorage
-            if (!isValidUser) {
-                const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-                const user = users.find(u => u.username === username && u.password === password);
-                isValidUser = !!user;
-            }
+                if (result.reused) {
+                    showSuccess('✓ A verification code was already sent. Please enter that code to continue.');
+                    return;
+                }
 
-            if (isValidUser) {
-                showSuccess('✓ Login successful! Redirecting...');
-                
-                // Clear form
-                loginForm.reset();
-                
-                // Simulate redirect after 2 seconds
-                setTimeout(() => {
-                    alert('Welcome, ' + username + '! You have successfully logged in.');
-                    // In a real application, you would redirect to another page:
-                    // window.location.href = 'dashboard.html';
-                }, 1500);
-            } else {
-                showError('✗ Invalid username or password!');
+                sendVerificationCodeByEmail(result.email, result.code);
+                showSuccess('✓ Verification code generated and prepared in your email client. Enter it below to finish login.');
+            } catch (error) {
+                showError(`✗ ${error.message}`);
                 passwordInput.value = '';
                 passwordInput.focus();
+            }
+        });
+
+        verifyForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const enteredCode = verificationCodeInput.value.trim();
+            const username = usernameInput.value.trim();
+
+            try {
+                const result = await mockLambdaApi.invoke('/verify-otp', { username, code: enteredCode });
+                showSuccess('✓ Login successful with two-factor verification!');
+                verifyForm.reset();
+                verifyForm.style.display = 'none';
+                loginForm.reset();
+                setLoginFormEnabled(true);
+
+                setTimeout(() => {
+                    alert('Welcome, ' + result.username + '! You have successfully logged in.');
+                }, 1000);
+            } catch (error) {
+                if (error.message.includes('No pending') || error.message.includes('expired')) {
+                    verifyForm.style.display = 'none';
+                    setLoginFormEnabled(true);
+                }
+                showError(`✗ ${error.message}`);
             }
         });
 
