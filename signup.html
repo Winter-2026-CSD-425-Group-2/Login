@@ -393,6 +393,13 @@
             </div>
 
             <div class="form-group">
+                <label for="email">Email</label>
+                <div class="input-wrapper">
+                    <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                </div>
+            </div>
+
+            <div class="form-group">
                 <label for="password">Password</label>
                 <div class="input-wrapper">
                     <input type="password" id="password" name="password" placeholder="Create a password" required>
@@ -417,10 +424,35 @@
     <script>
         const signupForm = document.getElementById('signupForm');
         const usernameInput = document.getElementById('username');
+        const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
         const confirmPasswordInput = document.getElementById('confirmPassword');
         const errorMessage = document.getElementById('errorMessage');
         const successMessage = document.getElementById('successMessage');
+
+        const mockLambdaApi = {
+            async invoke(route, payload) {
+                if (route === '/register') {
+                    const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+
+                    if (users.some(user => user.username === payload.username)) {
+                        throw new Error('Username already taken! Please choose another one.');
+                    }
+
+                    users.push({
+                        username: payload.username,
+                        email: payload.email,
+                        password: payload.password,
+                        registeredAt: new Date().toISOString()
+                    });
+
+                    localStorage.setItem('registeredUsers', JSON.stringify(users));
+                    return { message: 'Account created successfully' };
+                }
+
+                throw new Error('Route not implemented in mock Lambda');
+            }
+        };
 
         // Function to show error message
         function showError(message) {
@@ -442,16 +474,23 @@
         }
 
         // Handle form submission
-        signupForm.addEventListener('submit', function(e) {
+        signupForm.addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const username = usernameInput.value.trim();
+            const email = emailInput.value.trim().toLowerCase();
             const password = passwordInput.value;
             const confirmPassword = confirmPasswordInput.value;
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
             // Validate all fields are filled
-            if (username === '' || password === '' || confirmPassword === '') {
+            if (username === '' || email === '' || password === '' || confirmPassword === '') {
                 showError('✗ Please fill in all fields!');
+                return;
+            }
+
+            if (!emailPattern.test(email)) {
+                showError('✗ Please enter a valid email address!');
                 return;
             }
 
@@ -478,40 +517,21 @@
                 return;
             }
 
-            // Store user data in localStorage (simulating database)
-            const userData = {
-                username: username,
-                password: password,
-                registeredAt: new Date().toISOString()
-            };
+            try {
+                await mockLambdaApi.invoke('/register', { username, email, password });
+                showSuccess('✓ Account created successfully! Redirecting to login...');
+                signupForm.reset();
 
-            // Get existing users or initialize empty array
-            let users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-            
-            // Check if username already exists
-            if (users.some(user => user.username === username)) {
-                showError('✗ Username already taken! Please choose another one.');
-                return;
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+            } catch (error) {
+                showError(`✗ ${error.message}`);
             }
-
-            // Add new user
-            users.push(userData);
-            localStorage.setItem('registeredUsers', JSON.stringify(users));
-
-            // Show success message
-            showSuccess('✓ Account created successfully! Redirecting to login...');
-            
-            // Clear form
-            signupForm.reset();
-            
-            // Redirect to login page after 2 seconds
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 2000);
         });
 
         // Add input focus effects
-        const inputs = document.querySelectorAll('input[type="text"], input[type="password"]');
+        const inputs = document.querySelectorAll('input[type="text"], input[type="password"], input[type="email"]');
         inputs.forEach(input => {
             input.addEventListener('focus', function() {
                 this.parentElement.parentElement.style.transform = 'scale(1.02)';

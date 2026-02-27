@@ -8,7 +8,7 @@ CREATE TABLE users (
 );
 INSERT INTO users (username, password)
 VALUES ('admin', 'password123');
--- Find a user by username
+
 SELECT *
 FROM users
 WHERE username = 'admin';
