@@ -6,9 +6,9 @@ Two-step authentication demo with email-based OTP. This repository now includes:
 - SQL files for creating and seeding the users table
 
 Overview of the auth flow
-1) Users register with a username and password (use a valid email address as the username for the AWS-backed flow).
+1) Users register with a username and password (use a valid email address as the username for the AWS-backed flow). After successful registration, the frontend automatically initiates an OTP by calling /login and prompts the user to verify the code.
 2) On login, the backend validates credentials and sends a 6-digit OTP to the user's email via AWS SES.
-3) The user completes login by submitting the OTP to the /verify route.
+3) The user completes login by submitting the OTP to the /verify route. The same OTP verification step is used immediately after registration.
 
 Routes
 - POST /register: Create a new user (username must be an email for OTP delivery in the AWS flow).
@@ -27,7 +27,7 @@ Frontend options
 Option A: Minimal S3 frontend (uses real AWS backend)
 - Location: frontend/
 - Purpose: Simple register and login forms wired to your Lambda Function URL via frontend/authentication.js
-- Note: This minimal UI does not include an OTP input page. You can verify via curl (see below) or extend the UI to call POST /verify.
+- Now includes an OTP input and Verify button. After registration, the page automatically triggers an OTP via the login route and prompts the user to verify.
 
 Option B: Local mock frontend (no AWS required)
 - Files: index.html and signup.html at the repo root
@@ -127,7 +127,7 @@ curl -i -X POST "https://<your-function-url>/verify" \
 const LAMBDA_URL = "https://<id>.lambda-url.<region>.on.aws/";
 
 - Note: The LAMBDA_URL in the repository may point to a sample URL; replace it with your own.
-- The provided pages include forms for register and login. Add a small OTP input and POST /verify to complete the flow in the UI, or use the curl example above.
+- The provided pages include forms for register and login, an OTP input, and a Verify button that calls POST /verify. After registration, the page automatically triggers OTP via the login route so you can complete setup right away.
 
 Default demo users (from the SQL seed file)
 - student / 1234
@@ -139,7 +139,3 @@ Notes and troubleshooting
 - PyMySQL import errors: Ensure the layer zip has a top-level folder named python and that the layer is created for Python 3.14 and attached to the function.
 - Database connectivity: Verify security groups, subnets/VPC settings (if your Lambda runs in a VPC), and that DB_HOST/DB_USER/DB_PASSWORD/DB_NAME are correct. Check CloudWatch logs for errors.
 - SES sending issues: Verify SENDER_EMAIL in SES, confirm AWS_REGION matches the SES region, and that your account is out of sandbox or recipients are verified. Review CloudWatch logs for ses:SendEmail errors.
-- 404 Route not found: Call the Function URL with /register, /login, or /verify (the base URL alone will return 404).
-- CORS: OPTIONS is handled by the function. Ensure Function URL CORS allows POST and Content-Type: application/json.
-- OTP storage: OTPs are stored in-memory per Lambda instance and expire after 5 minutes. They do not persist across cold starts or multiple instances. For production, use a durable store (e.g., DynamoDB) and add rate limiting.
-- Security: Do not hard-code secrets for production; use AWS Secrets Manager or environment variables, restrict CORS, and prefer API Gateway + IAM/authorizers over a public Function URL. Hash passwords (e.g., bcrypt) instead of storing plaintext; this demo uses plaintext for simplicity.
