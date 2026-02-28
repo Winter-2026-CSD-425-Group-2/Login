@@ -1,27 +1,40 @@
 AWS Lambda + S3 Login Demo with Email OTP (Python 3.14, MySQL via PyMySQL, AWS SES)
 
-This demo implements a two-step authentication flow:
-1) Users register with a username and password (use a valid email address as the username).
-2) On login, the Lambda validates credentials and sends a 6-digit OTP to the user's email via AWS SES.
+Two-step authentication demo with email-based OTP. This repository now includes:
+- A deployable AWS Lambda backend that connects to MySQL and sends OTP via SES
+- Two frontend options: a minimal S3-hosted frontend and a local mock frontend for quick testing
+- SQL files for creating and seeding the users table
+
+Overview of the auth flow
+1) Users register with a username and password (use a valid email address as the username for the AWS-backed flow).
+2) On login, the backend validates credentials and sends a 6-digit OTP to the user's email via AWS SES.
 3) The user completes login by submitting the OTP to the /verify route.
 
-What you get
-- Backend: Python 3.14 AWS Lambda that connects to MySQL using PyMySQL, sends OTPs via AWS SES, and exposes routes for register/login/verify.
-- Frontend: Simple HTML/CSS/JS pages in frontend/ (login.html, register.html, authentication.js) for basic register/login.
-- Database: Example schema and seed data in database/create_database.sql.
-
 Routes
-- POST /register: Create a new user (username must be an email for OTP delivery).
+- POST /register: Create a new user (username must be an email for OTP delivery in the AWS flow).
 - POST /login: Validate credentials; on success, send a 6-digit OTP to the user's email.
 - POST /verify: Validate the OTP and finish the login.
 - OPTIONS: Handled for CORS.
 
 Repo structure
-- backend/authentication.py   (Lambda handler)
-- frontend/                   (Static frontend: login.html, register.html, authentication.js, style.css)
-- database/create_database.sql
+- backend/authentication.py           (Lambda handler)
+- database/create_database.sql        (schema + demo seed users)
+- frontend/                           (minimal S3-friendly UI: login.html, register.html, authentication.js, style.css)
+- index.html, signup.html             (standalone local mock UI with 2FA via mailto, no AWS required)
+- Database-Group2-Carolina/Database.sql and AWS Lwtech-Group2.session.sql (additional SQL examples)
 
-Prerequisites
+Frontend options
+Option A: Minimal S3 frontend (uses real AWS backend)
+- Location: frontend/
+- Purpose: Simple register and login forms wired to your Lambda Function URL via frontend/authentication.js
+- Note: This minimal UI does not include an OTP input page. You can verify via curl (see below) or extend the UI to call POST /verify.
+
+Option B: Local mock frontend (no AWS required)
+- Files: index.html and signup.html at the repo root
+- Behavior: Simulates register/login/OTP locally using localStorage and opens your email client via mailto for the mock OTP. This does NOT talk to the AWS backend and is intended for quick UI demo/testing.
+- To use: Open signup.html to create an account, then index.html to login and complete mock 2FA. To reset, clear browser localStorage.
+
+Prerequisites (for AWS deployment)
 - AWS account with permissions for Lambda, S3, SES, and (optionally) RDS MySQL.
 - A reachable MySQL database (Amazon RDS or other), and its endpoint/credentials.
 - Lambda runtime: Python 3.14.
@@ -35,7 +48,7 @@ Prerequisites
 - Run database/create_database.sql on your database to create a users table and insert demo users. Note: The script creates a database named user_id. Either:
   - Change DB_NAME in backend/authentication.py to user_id, or
   - Modify the SQL to match your chosen database name.
-- For email OTP to work, usernames should be valid email addresses. The seed file includes simple usernames for demonstration; create/register users with real email addresses for OTP testing.
+- For email OTP to work in the AWS flow, usernames should be valid email addresses. The seed file includes demo usernames; register users with real email addresses for OTP testing.
 
 2) Package PyMySQL as a Lambda layer (Python 3.14)
 PyMySQL is not included in the Lambda runtime, so you must attach it via a Lambda layer compatible with Python 3.14.
@@ -105,7 +118,7 @@ curl -i -X POST "https://<your-function-url>/verify" \
   -H "Content-Type: application/json" \
   -d '{"username":"user@example.com","code":"123456"}'
 
-4) Frontend: host on S3
+4) Frontend: host on S3 (for Option A)
 - Create an S3 bucket and enable static website hosting.
 - For a public demo, allow public read access (bucket policy). Restrict in production.
 - Upload the contents of the frontend/ folder (login.html, register.html, authentication.js, style.css) to the bucket root.
@@ -113,7 +126,8 @@ curl -i -X POST "https://<your-function-url>/verify" \
 
 const LAMBDA_URL = "https://<id>.lambda-url.<region>.on.aws/";
 
-- The provided pages include forms for register and login. OTP verification currently isn't implemented in the frontend; use the curl example above or add a simple input and a fetch to POST /verify.
+- Note: The LAMBDA_URL in the repository may point to a sample URL; replace it with your own.
+- The provided pages include forms for register and login. Add a small OTP input and POST /verify to complete the flow in the UI, or use the curl example above.
 
 Default demo users (from the SQL seed file)
 - student / 1234
