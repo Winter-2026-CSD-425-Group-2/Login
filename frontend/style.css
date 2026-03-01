@@ -72,6 +72,7 @@ button:disabled {
 }
 
 #otpSection {
+    display: none;
     margin-top: 12px;
 }
 
