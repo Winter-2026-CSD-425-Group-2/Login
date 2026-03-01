@@ -3,6 +3,8 @@ const LAMBDA_URL = "https://c6eazcqlvr2qhx4pvphs3i3vza0olarb.lambda-url.us-east-
 let currentUsername = "";
 let currentPassword = "";
 let currentFlow = null; // "login" or "register"
+let isAuthBusy = false; // prevent overlapping login/register calls
+let isOtpBusy = false;  // prevent overlapping verify calls
 
 const login = () => { currentFlow = "login"; return auth("login"); };
 const register = () => { currentFlow = "register"; return auth("register"); };
@@ -49,6 +51,8 @@ function setLoading(isLoading, target) {
 }
 
 function auth(route) {
+  if (isAuthBusy) return; // don't allow overlapping auth requests
+
   const usernameEl = document.getElementById("username");
   const passwordEl = document.getElementById("password");
   const username = (usernameEl?.value || "").trim();
@@ -57,7 +61,7 @@ function auth(route) {
   currentUsername = username;
   currentPassword = password;
 
-  showOtp(false);
+  // Do not hide the OTP section here; it may have just been shown by a previous successful step
   setMessage("", true);
 
   if (!username || !password) {
@@ -67,6 +71,7 @@ function auth(route) {
     return;
   }
 
+  isAuthBusy = true;
   setLoading(true, route);
 
   fetch(`${LAMBDA_URL}${route}`, {
@@ -78,7 +83,7 @@ function auth(route) {
     .then(async data => {
       if (route === "register") {
         if (data.success) {
-          // Clearer messaging for registration flow
+          // Registration flow: backend already sends the OTP; prompt for it
           setMessage("We sent a verification code to your email. Enter it below to complete registration.", true);
           showOtp(true);
         } else {
@@ -88,24 +93,27 @@ function auth(route) {
             : (msg || "Registration failed");
           setMessage(friendly, false);
         }
-        setLoading(false, route);
         return;
       }
 
-      // Login flow messaging remains unchanged
+      // Login flow
       setMessage(data.message || "", !!data.success);
       if (data.success) {
         showOtp(true);
       }
-      setLoading(false, route);
     })
     .catch(() => {
       setMessage("Server not reachable", false);
+    })
+    .finally(() => {
+      isAuthBusy = false;
       setLoading(false, route);
     });
 }
 
 function verify() {
+  if (isOtpBusy) return; // don't allow overlapping OTP verifications
+
   const codeEl = document.getElementById("otp");
   const code = (codeEl?.value || "").trim();
   if (!currentUsername || !code) {
@@ -117,6 +125,7 @@ function verify() {
     return;
   }
 
+  isOtpBusy = true;
   setLoading(true, "otp");
 
   fetch(`${LAMBDA_URL}verify`, {
@@ -140,7 +149,10 @@ function verify() {
     .catch(() => {
       setMessage("Server not reachable", false);
     })
-    .finally(() => setLoading(false, "otp"));
+    .finally(() => {
+      isOtpBusy = false;
+      setLoading(false, "otp");
+    });
 }
 
 // Ensure OTP section is hidden on initial load/navigation (including bfcache restores)

@@ -6,14 +6,14 @@ Two-step authentication demo with email-based OTP. This repository includes:
 - SQL for creating the users table
 
 Overview of the auth flow
-1) Users register with a username and password (use a valid email address as the username for the AWS-backed flow). After successful registration, the frontend automatically initiates an OTP by calling /login and prompts the user to verify the code.
-2) On login, the backend validates credentials and sends a 6-digit OTP to the user's email via AWS SES.
-3) The user completes login by submitting the OTP to the /verify route. The same OTP verification step is used immediately after registration.
+1) Register: Users enter a username (email) and password. The backend sends a 6‑digit OTP for registration and holds a pending account. The frontend shows the OTP input so the user can complete registration.
+2) Login: Users enter a username and password. The backend validates credentials and sends a 6‑digit OTP to the user's email via AWS SES.
+3) Verify: The user submits the OTP to /verify to complete the flow (registration or login).
 
 Routes
-- POST /register: Create a new user (username must be an email for OTP delivery in the AWS flow).
-- POST /login: Validate credentials; on success, send a 6-digit OTP to the user's email.
-- POST /verify: Validate the OTP and finish the login.
+- POST /register: Begin registration and send a 6‑digit OTP to the provided email. The account is created only after a successful /verify.
+- POST /login: Validate credentials; on success, send a 6‑digit OTP to the user's email.
+- POST /verify: Validate the OTP and finish the flow (creates the account if this was a registration).
 - OPTIONS: Handled for CORS.
 
 Repo structure
@@ -27,7 +27,7 @@ Repo structure
 Frontend (S3-hosted, uses real AWS backend)
 - Location: frontend/
 - Purpose: Simple register and login forms wired to your Lambda Function URL via frontend/authentication.js
-- Includes an OTP input and Verify button. After registration, the page automatically triggers an OTP via the login route and prompts the user to verify.
+- Includes an OTP input and Verify button. After registration, the page shows the OTP input immediately (no automatic login call); enter the code to complete account creation.
 
 Prerequisites (for AWS deployment)
 - AWS account with permissions for Lambda, S3, SES, and (optionally) RDS MySQL.
@@ -125,7 +125,7 @@ curl -i -X POST "https://<your-function-url>/verify" \
 const LAMBDA_URL = "https://<id>.lambda-url.<region>.on.aws/";
 
 - Note: The LAMBDA_URL in this repository is already set to a working Function URL in us-east-2 for the maintainer's deployment. If you are setting up your own SES/Lambda, replace it with your own Function URL.
-- The provided pages include forms for register and login, an OTP input, and a Verify button that calls POST /verify. After registration, the page automatically triggers OTP via the login route so you can complete setup right away.
+- The provided pages include forms for register and login, an OTP input, and a Verify button that calls POST /verify. After registration, the UI shows the OTP fields and does not auto‑call /login; simply enter the code from your email.
 
 5) Optional: Automatic S3 deployments with GitHub Actions
 This repo includes a workflow at .github/workflows/deploy-frontend.yml that deploys the frontend/ directory to S3 on pushes to the main branch.
