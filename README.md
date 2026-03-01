@@ -1,41 +1,48 @@
 AWS Lambda + S3 Login Demo with Email OTP (Python 3.14, MySQL via PyMySQL, AWS SES)
 
-This demo implements a two-step authentication flow:
-1) Users register with a username and password (use a valid email address as the username).
-2) On login, the Lambda validates credentials and sends a 6-digit OTP to the user's email via AWS SES.
-3) The user completes login by submitting the OTP to the /verify route.
+Two-step authentication demo with email-based OTP. This repository includes:
+- A deployable AWS Lambda backend that connects to MySQL and sends OTP via SES
+- A minimal S3-hosted frontend
+- SQL for creating the users table
 
-What you get
-- Backend: Python 3.14 AWS Lambda that connects to MySQL using PyMySQL, sends OTPs via AWS SES, and exposes routes for register/login/verify.
-- Frontend: Simple HTML/CSS/JS pages in frontend/ (login.html, register.html, authentication.js) for basic register/login.
-- Database: Example schema and seed data in database/create_database.sql.
+Overview of the auth flow
+1) Users register with a username and password (use a valid email address as the username for the AWS-backed flow). After successful registration, the frontend automatically initiates an OTP by calling /login and prompts the user to verify the code.
+2) On login, the backend validates credentials and sends a 6-digit OTP to the user's email via AWS SES.
+3) The user completes login by submitting the OTP to the /verify route. The same OTP verification step is used immediately after registration.
 
 Routes
-- POST /register: Create a new user (username must be an email for OTP delivery).
+- POST /register: Create a new user (username must be an email for OTP delivery in the AWS flow).
 - POST /login: Validate credentials; on success, send a 6-digit OTP to the user's email.
 - POST /verify: Validate the OTP and finish the login.
 - OPTIONS: Handled for CORS.
 
 Repo structure
-- backend/authentication.py   (Lambda handler)
-- frontend/                   (Static frontend: login.html, register.html, authentication.js, style.css)
-- database/create_database.sql
+- backend/authentication.py           (Lambda handler)
+- backend/ses_send_email_policy.json  (inline IAM policy allowing SES send)
+- backend/s3_deploy_gha_policy.json   (IAM policy template for S3 deploy via GitHub Actions)
+- database/create_database.sql        (schema)
+- frontend/                           (minimal S3-friendly UI: login.html, register.html, authentication.js, style.css)
 
-Prerequisites
+Frontend (S3-hosted, uses real AWS backend)
+- Location: frontend/
+- Purpose: Simple register and login forms wired to your Lambda Function URL via frontend/authentication.js
+- Includes an OTP input and Verify button. After registration, the page automatically triggers an OTP via the login route and prompts the user to verify.
+
+Prerequisites (for AWS deployment)
 - AWS account with permissions for Lambda, S3, SES, and (optionally) RDS MySQL.
 - A reachable MySQL database (Amazon RDS or other), and its endpoint/credentials.
 - Lambda runtime: Python 3.14.
-- AWS SES configured in your chosen region:
+- AWS SES configured in your region. This repo defaults to us-east-2:
   - Verify a sender email address (used as SENDER_EMAIL).
   - If your SES account is in the sandbox, verify recipient emails or request production access.
   - Attach an IAM role/policy to the Lambda with permission to call ses:SendEmail.
 
-1) Database: create schema and seed users
+1) Database: create schema
 - If you don’t already have a MySQL database, create an RDS MySQL instance and allow your Lambda to reach it (VPC config and security groups as needed).
-- Run database/create_database.sql on your database to create a users table and insert demo users. Note: The script creates a database named user_id. Either:
+- Run database/create_database.sql on your database to create the users table. Note: The script creates a database named user_id. Either:
   - Change DB_NAME in backend/authentication.py to user_id, or
   - Modify the SQL to match your chosen database name.
-- For email OTP to work, usernames should be valid email addresses. The seed file includes simple usernames for demonstration; create/register users with real email addresses for OTP testing.
+- For email OTP to work in the AWS flow, usernames should be valid email addresses.
 
 2) Package PyMySQL as a Lambda layer (Python 3.14)
 PyMySQL is not included in the Lambda runtime, so you must attach it via a Lambda layer compatible with Python 3.14.
@@ -70,8 +77,11 @@ B. Add the code and configuration
 - Update DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME near the top of that file to match your database.
 - Update SES config:
   - SENDER_EMAIL: Verified sender email address in SES.
-  - AWS_REGION: Region where SES is configured (e.g., us-east-1).
-- Ensure the Lambda's execution role has permission to call ses:SendEmail.
+  - AWS_REGION: This repo defaults to us-east-2. Keep this value or change it to the region where your SES is configured.
+- Grant the Lambda execution role permission to send email with SES. You can add the inline policy from backend/ses_send_email_policy.json:
+  - Lambda > Your function > Configuration > Permissions > Role name
+  - Add permissions > Create inline policy > JSON
+  - Paste the contents of backend/ses_send_email_policy.json and save.
 - Deploy the function.
 
 C. Attach the PyMySQL layer
@@ -108,24 +118,68 @@ curl -i -X POST "https://<your-function-url>/verify" \
 4) Frontend: host on S3
 - Create an S3 bucket and enable static website hosting.
 - For a public demo, allow public read access (bucket policy). Restrict in production.
-- Upload the contents of the frontend/ folder (login.html, register.html, authentication.js, style.css) to the bucket root.
+- Upload the contents of the frontend/ folder (login.html, register.html, authentication.js, style.css) to the bucket root. Alternatively, use the included GitHub Actions workflow (see section below) to deploy automatically on each push to main.
 - Edit frontend/authentication.js and set LAMBDA_URL to your Function URL (include the trailing slash). Example:
 
 const LAMBDA_URL = "https://<id>.lambda-url.<region>.on.aws/";
 
-- The provided pages include forms for register and login. OTP verification currently isn't implemented in the frontend; use the curl example above or add a simple input and a fetch to POST /verify.
+- Note: The LAMBDA_URL in this repository is already set to a working Function URL in us-east-2 for the maintainer's deployment. If you are setting up your own SES/Lambda, replace it with your own Function URL.
+- The provided pages include forms for register and login, an OTP input, and a Verify button that calls POST /verify. After registration, the page automatically triggers OTP via the login route so you can complete setup right away.
 
-Default demo users (from the SQL seed file)
-- student / 1234
-- admin / password123
-- test / 12345
-- user / password
+5) Optional: Automatic S3 deployments with GitHub Actions
+This repo includes a workflow at .github/workflows/deploy-frontend.yml that deploys the frontend/ directory to S3 on pushes to the main branch.
+
+Prerequisites
+- Create an S3 bucket and enable static website hosting (or front with CloudFront).
+- Ensure the bucket policy allows public read if you are hosting directly from S3 for a demo. For production, prefer CloudFront with an origin access identity and restrict the bucket.
+- Grant GitHub Actions access to your S3 bucket via an IAM user and access keys:
+  1) Create a least-privilege S3 policy for your bucket. Use backend/s3_deploy_gha_policy.json as a template and replace YOUR_BUCKET_NAME with your actual bucket name. If your bucket has Object Ownership set to "Bucket owner enforced" (ACLs disabled), you may remove s3:PutObjectAcl from the policy.
+     - IAM Console > Policies > Create policy > JSON > paste the updated JSON > Next > Create policy.
+  2) Create an IAM user (e.g., github-actions-s3-deployer) and attach the policy:
+     - IAM Console > Users > Create user > Name: github-actions-s3-deployer > Create user.
+     - Open the user > Permissions > Add permissions > Attach policies directly > select the policy you created > Add permissions.
+  3) Create access keys for the user:
+     - IAM Console > Users > github-actions-s3-deployer > Security credentials > Create access key.
+     - Choose "Application running outside AWS" and confirm. Copy the Access key ID and Secret access key.
+  4) Add the following GitHub Actions secrets in your repository (Settings > Secrets and variables > Actions):
+     - AWS_ACCESS_KEY_ID: the access key ID from step 3.
+     - AWS_SECRET_ACCESS_KEY: the secret access key from step 3.
+     - AWS_REGION: your AWS region (e.g., us-east-2).
+     - S3_BUCKET: your bucket name.
+
+Security notes
+- Keep access scoped to only the required bucket; do not use wildcard resources.
+- Rotate access keys regularly and remove unused ones.
+- For production, consider using OpenID Connect (OIDC) with aws-actions/configure-aws-credentials to assume an IAM role, eliminating long-lived access keys.
+
+How it works
+- Trigger: Pushes to main that change files under frontend/ (or the workflow file itself).
+- Steps:
+  - Checks out the repo.
+  - Configures AWS credentials.
+  - Syncs non-HTML assets with a long cache (immutable) for better performance.
+  - Syncs HTML files separately with no-cache so browsers always fetch the latest pages.
+- After a successful run, your site is updated. If static website hosting is enabled, the URL is typically:
+  http://<bucket-name>.s3-website-<region>.amazonaws.com
+
+Notes
+- The workflow uses aws-actions/configure-aws-credentials and the AWS CLI to perform the sync.
+- If you use CloudFront, consider adding an additional job to create an invalidation when HTML or JS/CSS change.
+- The workflow uses --delete to remove files in the bucket that are no longer present locally.
+
+Important limitations and production notes
+- OTP storage is in-memory inside the Lambda execution environment. If the function cold-starts or scales out, previously generated OTPs may be lost. For production, use a shared persistence layer (e.g., DynamoDB with TTL or ElastiCache/Redis) to store OTPs.
+- Passwords in the sample are stored in plaintext. In production, store password hashes only (e.g., bcrypt, scrypt, Argon2) and enforce strong password policies.
+- The Function URL setup uses public access (Auth type: NONE) for demo simplicity. In production, protect your endpoints with IAM or API Gateway + authorizers, and restrict CORS origins strictly.
+- Add rate limiting/abuse protections (e.g., throttle login and OTP requests, temporary lockouts, or CAPTCHA) to prevent brute-force and spam.
+- Avoid hardcoding secrets. Move DB and email config to environment variables or a secrets manager (AWS Secrets Manager/Parameter Store) and encrypt with KMS.
+- Ensure SES identities are verified and configure SPF/DKIM for better email deliverability.
+- Keep services in the same region when possible. This repository defaults to us-east-2. If SES is in a different region, make sure AWS_REGION in the code matches the SES region you intend to use.
 
 Notes and troubleshooting
 - PyMySQL import errors: Ensure the layer zip has a top-level folder named python and that the layer is created for Python 3.14 and attached to the function.
 - Database connectivity: Verify security groups, subnets/VPC settings (if your Lambda runs in a VPC), and that DB_HOST/DB_USER/DB_PASSWORD/DB_NAME are correct. Check CloudWatch logs for errors.
-- SES sending issues: Verify SENDER_EMAIL in SES, confirm AWS_REGION matches the SES region, and that your account is out of sandbox or recipients are verified. Review CloudWatch logs for ses:SendEmail errors.
-- 404 Route not found: Call the Function URL with /register, /login, or /verify (the base URL alone will return 404).
-- CORS: OPTIONS is handled by the function. Ensure Function URL CORS allows POST and Content-Type: application/json.
-- OTP storage: OTPs are stored in-memory per Lambda instance and expire after 5 minutes. They do not persist across cold starts or multiple instances. For production, use a durable store (e.g., DynamoDB) and add rate limiting.
-- Security: Do not hard-code secrets for production; use AWS Secrets Manager or environment variables, restrict CORS, and prefer API Gateway + IAM/authorizers over a public Function URL. Hash passwords (e.g., bcrypt) instead of storing plaintext; this demo uses plaintext for simplicity.
+- SES sending issues: Verify SENDER_EMAIL in SES, confirm AWS_REGION matches the SES region (default here is us-east-2), and that your account is out of sandbox or recipients are verified. Review CloudWatch logs for ses:SendEmail errors.
+- CORS errors from the browser: Make sure Function URL CORS is enabled with method POST and header Content-Type, and that your frontend uses the exact Function URL (including the trailing slash).
+- Layer/architecture mismatch: If you choose arm64 for the function, create an arm64-compatible layer or switch to x86_64 as shown above.
+- OTP not received: Check CloudWatch logs for SES errors, confirm the recipient is verified if your SES account is in sandbox, and check spam/junk folders.

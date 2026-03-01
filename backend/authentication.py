@@ -12,7 +12,7 @@ DB_PASSWORD = "placeholder"
 DB_NAME = "user_id"
 
 SENDER_EMAIL = "placeholder"
-AWS_REGION = "us-east-1"
+AWS_REGION = "us-east-2"
 
 ses = boto3.client("ses", region_name=AWS_REGION)
 
