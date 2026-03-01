@@ -152,7 +152,7 @@ def lambda_handler(event, context):
 
                 return build_response(200, {
                     "success": True,
-                    "message": "Login successful"
+                    "message": "Verification successful"
                 })
 
             else:
