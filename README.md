@@ -14,15 +14,16 @@ Routes
 - POST /register: Create a new user (username must be an email for OTP delivery in the AWS flow).
 - POST /login: Validate credentials; on success, send a 6-digit OTP to the user's email.
 - POST /verify: Validate the OTP and finish the login.
-- OPTIONS: Handled for CORS.
+- OPTIONS: The Lambda handler returns 200 for preflight when forwarded; with Function URL CORS enabled, AWS also handles CORS automatically.
 
 Repo structure
 - backend/authentication.py           (Lambda handler)
 - aws_config/ses_send_email_policy.json  (inline IAM policy allowing SES send)
 - aws_config/s3_deploy_gha_policy.json   (IAM policy template for S3 deploy via GitHub Actions)
 - aws_config/s3_public_read_bucket_policy.json (bucket policy template for public-read static website hosting)
-- database/create_database.sql        (schema)
+- database/create_database.sql        (schema + seed data)
 - frontend/                           (minimal S3-friendly UI: login.html, register.html, authentication.js, style.css)
+- .github/workflows/deploy-frontend.yml (deploy frontend to S3 on pushes to main)
 
 Frontend (S3-hosted, uses real AWS backend)
 - Location: frontend/
@@ -38,11 +39,17 @@ Prerequisites (for AWS deployment)
   - If your SES account is in the sandbox, verify recipient emails or request production access.
   - Attach an IAM role/policy to the Lambda with permission to call ses:SendEmail.
 
+Current defaults in this repo
+- Python runtime: 3.14
+- AWS region in code: us-east-2
+- Architecture: x86_64
+- Database name: user_id (used by both the SQL script and backend/authentication.py by default)
+
 1) Database: create schema
 - If you don’t already have a MySQL database, create an RDS MySQL instance and allow your Lambda to reach it (VPC config and security groups as needed).
-- Run database/create_database.sql on your database to create the users table. Note: The script creates a database named user_id. Either:
-  - Change DB_NAME in backend/authentication.py to user_id, or
-  - Modify the SQL to match your chosen database name.
+- Run database/create_database.sql on your database to create the users table. The script creates a database named user_id and a users table with a UNIQUE username.
+- By default, backend/authentication.py uses DB_NAME=user_id to match the script. Adjust either the code or the SQL if you prefer a different database name.
+- Note: The sample schema sets username VARCHAR(30). If your email addresses may exceed 30 characters, increase this length before inserting users.
 - For email OTP to work in the AWS flow, usernames should be valid email addresses.
 
 2) Package PyMySQL as a Lambda layer (Python 3.14)
@@ -184,3 +191,4 @@ Notes and troubleshooting
 - CORS errors from the browser: Make sure Function URL CORS is enabled with method POST and header Content-Type, and that your frontend uses the exact Function URL (including the trailing slash).
 - Layer/architecture mismatch: If you choose arm64 for the function, create an arm64-compatible layer or switch to x86_64 as shown above.
 - OTP not received: Check CloudWatch logs for SES errors, confirm the recipient is verified if your SES account is in sandbox, and check spam/junk folders.
+
