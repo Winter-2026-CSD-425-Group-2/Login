@@ -76,8 +76,22 @@ button:disabled {
     margin-top: 12px;
 }
 
+/* When JS toggles visibility, we add .otp-visible to override the default */
+#otpSection.otp-visible {
+    display: block;
+}
+
 #message {
     margin-top: 15px;
     font-weight: bold;
     min-height: 20px; /* reduce layout shift when messages update */
+}
+
+/* Message states without inline styles */
+#message.message-success {
+    color: #2e7d32; /* green */
+}
+
+#message.message-error {
+    color: #c62828; /* red */
 }

@@ -11,17 +11,25 @@ const verifyOtp = () => verify();
 function setMessage(text, success) {
   const message = document.getElementById("message");
   if (!message) return;
-  message.style.color = success ? "green" : "red";
-  message.textContent = text;
+  // Avoid inline styling; use state classes instead
+  message.classList.remove("message-success", "message-error");
+  message.textContent = text || "";
+  if (text) {
+    message.classList.add(success ? "message-success" : "message-error");
+  }
 }
 
 function showOtp(show) {
   const section = document.getElementById("otpSection");
   if (section) {
-    section.style.display = show ? "block" : "none";
-    if (show) {
-      const otpInput = document.getElementById("otp");
-      if (otpInput) otpInput.focus();
+    // Avoid inline styling; toggle a CSS class instead
+    section.classList.toggle("otp-visible", !!show);
+    const otpInput = document.getElementById("otp");
+    if (show && otpInput) {
+      otpInput.focus();
+    }
+    if (!show && otpInput) {
+      otpInput.value = ""; // clear any previous code
     }
   }
 }
@@ -134,3 +142,16 @@ function verify() {
     })
     .finally(() => setLoading(false, "otp"));
 }
+
+// Ensure OTP section is hidden on initial load/navigation (including bfcache restores)
+document.addEventListener("DOMContentLoaded", () => {
+  showOtp(false);
+  setMessage("", true);
+});
+
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) {
+    showOtp(false);
+    setMessage("", true);
+  }
+});
