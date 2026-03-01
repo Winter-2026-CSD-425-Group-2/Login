@@ -75,7 +75,7 @@ def lambda_handler(event, context):
     except:
         return build_response(400, {"success": False, "message": "Invalid JSON"})
 
-    username = data.get("username")
+    email = data.get("email")
     password = data.get("password")
 
     conn = None
@@ -86,44 +86,44 @@ def lambda_handler(event, context):
 
             if path == "/register":
 
-                if not username or not password:
-                    return build_response(400, {"success": False, "message": "Missing username or password"})
+                if not email or not password:
+                    return build_response(400, {"success": False, "message": "Missing email or password"})
 
-                check_sql = "SELECT id FROM users WHERE username=%s"
-                cursor.execute(check_sql, (username,))
+                check_sql = "SELECT id FROM users WHERE email=%s"
+                cursor.execute(check_sql, (email,))
                 existing_user = cursor.fetchone()
 
                 if existing_user:
-                    return build_response(409, {"success": False, "message": "Username already exists"})
+                    return build_response(409, {"success": False, "message": "Email already exists"})
 
-                insert_sql = "INSERT INTO users (username, password) VALUES (%s, %s)"
-                cursor.execute(insert_sql, (username, password))
+                insert_sql = "INSERT INTO users (email, password) VALUES (%s, %s)"
+                cursor.execute(insert_sql, (email, password))
                 conn.commit()
 
                 return build_response(201, {"success": True, "message": "User created successfully"})
 
             elif path == "/login":
 
-                if not username or not password:
-                    return build_response(400, {"success": False, "message": "Missing username or password"})
+                if not email or not password:
+                    return build_response(400, {"success": False, "message": "Missing email or password"})
 
-                sql = "SELECT password FROM users WHERE username=%s"
-                cursor.execute(sql, (username,))
+                sql = "SELECT password FROM users WHERE email=%s"
+                cursor.execute(sql, (email,))
                 user = cursor.fetchone()
 
                 if not user or password != user["password"]:
-                    return build_response(401, {"success": False, "message": "Invalid username or password"})
+                    return build_response(401, {"success": False, "message": "Invalid email or password"})
 
                 # Generate OTP
                 code = generate_code()
                 expiry = datetime.now(timezone.utc) + timedelta(minutes=5)
 
-                otp_store[username] = {
+                otp_store[email] = {
                     "code": code,
                     "expiry": expiry
                 }
 
-                send_verification_email(username, code)
+                send_verification_email(email, code)
 
                 return build_response(200, {
                     "success": True,
@@ -134,10 +134,10 @@ def lambda_handler(event, context):
 
                 code = data.get("code")
 
-                if not username or not code:
-                    return build_response(400, {"success": False, "message": "Missing username or code"})
+                if not email or not code:
+                    return build_response(400, {"success": False, "message": "Missing email or code"})
 
-                stored = otp_store.get(username)
+                stored = otp_store.get(email)
 
                 if not stored:
                     return build_response(401, {"success": False, "message": "No OTP found"})
@@ -148,7 +148,7 @@ def lambda_handler(event, context):
                 if datetime.now(timezone.utc) > stored["expiry"]:
                     return build_response(401, {"success": False, "message": "OTP expired"})
 
-                del otp_store[username]
+                del otp_store[email]
 
                 return build_response(200, {
                     "success": True,
