@@ -1,0 +1,55 @@
+name: Deploy Frontend to S3
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Sync frontend/ to S3
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Deploy static assets (non-HTML) with long cache
+        run: |
+          aws s3 sync frontend "s3://${S3_BUCKET}/" \
+            --delete \
+            --exclude "*.html" \
+            --cache-control "public, max-age=31536000, immutable"
+
+      - name: Deploy HTML with no-cache and prune removed files
+        run: |
+          # Ensure HTML files aren't cached by browsers, and delete stale ones
+          aws s3 sync frontend "s3://${S3_BUCKET}/" \
+            --delete \
+            --exclude "*" \
+            --include "*.html" \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+      - name: Output S3 website URL (if website hosting is enabled)
+        run: |
+          echo "If static website hosting is enabled, your site may be available at: http://${S3_BUCKET}.s3-website-${AWS_REGION}.amazonaws.com"

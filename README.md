@@ -117,13 +117,40 @@ curl -i -X POST "https://<your-function-url>/verify" \
 4) Frontend: host on S3
 - Create an S3 bucket and enable static website hosting.
 - For a public demo, allow public read access (bucket policy). Restrict in production.
-- Upload the contents of the frontend/ folder (login.html, register.html, authentication.js, style.css) to the bucket root.
+- Upload the contents of the frontend/ folder (login.html, register.html, authentication.js, style.css) to the bucket root. Alternatively, use the included GitHub Actions workflow (see section below) to deploy automatically on each push to main.
 - Edit frontend/authentication.js and set LAMBDA_URL to your Function URL (include the trailing slash). Example:
 
 const LAMBDA_URL = "https://<id>.lambda-url.<region>.on.aws/";
 
 - Note: The LAMBDA_URL in this repository is already set to a working Function URL in us-east-2 for the maintainer's deployment. If you are setting up your own SES/Lambda, replace it with your own Function URL.
 - The provided pages include forms for register and login, an OTP input, and a Verify button that calls POST /verify. After registration, the page automatically triggers OTP via the login route so you can complete setup right away.
+
+5) Optional: Automatic S3 deployments with GitHub Actions
+This repo includes a workflow at .github/workflows/deploy-frontend.yml that deploys the frontend/ directory to S3 on pushes to the main branch.
+
+Prerequisites
+- Create an S3 bucket and enable static website hosting (or front with CloudFront).
+- Ensure the bucket policy allows public read if you are hosting directly from S3 for a demo. For production, prefer CloudFront with an origin access identity and restrict the bucket.
+- In your GitHub repository Settings > Secrets and variables > Actions, add these secrets:
+  - AWS_ACCESS_KEY_ID
+  - AWS_SECRET_ACCESS_KEY
+  - AWS_REGION (e.g., us-east-2)
+  - S3_BUCKET (your bucket name)
+
+How it works
+- Trigger: Pushes to main that change files under frontend/ (or the workflow file itself).
+- Steps:
+  - Checks out the repo.
+  - Configures AWS credentials.
+  - Syncs non-HTML assets with a long cache (immutable) for better performance.
+  - Syncs HTML files separately with no-cache so browsers always fetch the latest pages.
+- After a successful run, your site is updated. If static website hosting is enabled, the URL is typically:
+  http://<bucket-name>.s3-website-<region>.amazonaws.com
+
+Notes
+- The workflow uses aws-actions/configure-aws-credentials and the AWS CLI to perform the sync.
+- If you use CloudFront, consider adding an additional job to create an invalidation when HTML or JS/CSS change.
+- The workflow uses --delete to remove files in the bucket that are no longer present locally.
 
 Important limitations and production notes
 - OTP storage is in-memory inside the Lambda execution environment. If the function cold-starts or scales out, previously generated OTPs may be lost. For production, use a shared persistence layer (e.g., DynamoDB with TTL or ElastiCache/Redis) to store OTPs.
