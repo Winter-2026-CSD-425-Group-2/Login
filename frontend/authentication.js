@@ -1,6 +1,6 @@
 const LAMBDA_URL = "https://c6eazcqlvr2qhx4pvphs3i3vza0olarb.lambda-url.us-east-2.on.aws/";
 
-let currentUsername = "";
+let currentEmail = "";
 let currentPassword = "";
 
 const login = () => auth("login");
@@ -20,10 +20,10 @@ function showOtp(show) {
 }
 
 function auth(route) {
-  const username = document.getElementById("username").value.trim();
+  const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
-  currentUsername = username;
+  currentEmail = email;
   currentPassword = password;
 
   showOtp(false);
@@ -32,7 +32,7 @@ function auth(route) {
   fetch(`${LAMBDA_URL}${route}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password })
+    body: JSON.stringify({ email, password })
   })
     .then(res => res.json())
     .then(async data => {
@@ -50,7 +50,7 @@ function auth(route) {
           const res2 = await fetch(`${LAMBDA_URL}login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: currentUsername, password: currentPassword })
+            body: JSON.stringify({ email: currentEmail, password: currentPassword })
           });
           const data2 = await res2.json();
           setMessage(data2.message || "", !!data2.success);
@@ -67,15 +67,15 @@ function auth(route) {
 
 function verify() {
   const code = document.getElementById("otp").value.trim();
-  if (!currentUsername || !code) {
-    setMessage("Please enter your username/password and the OTP code.", false);
+  if (!currentEmail || !code) {
+    setMessage("Please enter your email/password and the OTP code.", false);
     return;
   }
 
   fetch(`${LAMBDA_URL}verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: currentUsername, code })
+    body: JSON.stringify({ email: currentEmail, code })
   })
     .then(res => res.json())
     .then(data => {
