@@ -18,8 +18,9 @@ Routes
 
 Repo structure
 - backend/authentication.py           (Lambda handler)
-- backend/ses_send_email_policy.json  (inline IAM policy allowing SES send)
-- backend/s3_deploy_gha_policy.json   (IAM policy template for S3 deploy via GitHub Actions)
+- aws_config/ses_send_email_policy.json  (inline IAM policy allowing SES send)
+- aws_config/s3_deploy_gha_policy.json   (IAM policy template for S3 deploy via GitHub Actions)
+- aws_config/s3_public_read_bucket_policy.json (bucket policy template for public-read static website hosting)
 - database/create_database.sql        (schema)
 - frontend/                           (minimal S3-friendly UI: login.html, register.html, authentication.js, style.css)
 
@@ -78,10 +79,10 @@ B. Add the code and configuration
 - Update SES config:
   - SENDER_EMAIL: Verified sender email address in SES.
   - AWS_REGION: This repo defaults to us-east-2. Keep this value or change it to the region where your SES is configured.
-- Grant the Lambda execution role permission to send email with SES. You can add the inline policy from backend/ses_send_email_policy.json:
+- Grant the Lambda execution role permission to send email with SES. You can add the inline policy from aws_config/ses_send_email_policy.json:
   - Lambda > Your function > Configuration > Permissions > Role name
   - Add permissions > Create inline policy > JSON
-  - Paste the contents of backend/ses_send_email_policy.json and save.
+  - Paste the contents of aws_config/ses_send_email_policy.json and save.
 - Deploy the function.
 
 C. Attach the PyMySQL layer
@@ -117,7 +118,7 @@ curl -i -X POST "https://<your-function-url>/verify" \
 
 4) Frontend: host on S3
 - Create an S3 bucket and enable static website hosting.
-- For a public demo, allow public read access (bucket policy). Restrict in production.
+- For a public demo, allow public read access (bucket policy). Restrict in production. You can use the template at aws_config/s3_public_read_bucket_policy.json: replace YOUR_BUCKET_NAME with your bucket name and paste it under Permissions > Bucket policy. Ensure the bucket's Block Public Access settings allow public policies while you are using this demo.
 - Upload the contents of the frontend/ folder (login.html, register.html, authentication.js, style.css) to the bucket root. Alternatively, use the included GitHub Actions workflow (see section below) to deploy automatically on each push to main.
 - Edit frontend/authentication.js and set LAMBDA_URL to your Function URL (include the trailing slash). Example:
 
@@ -133,7 +134,7 @@ Prerequisites
 - Create an S3 bucket and enable static website hosting (or front with CloudFront).
 - Ensure the bucket policy allows public read if you are hosting directly from S3 for a demo. For production, prefer CloudFront with an origin access identity and restrict the bucket.
 - Grant GitHub Actions access to your S3 bucket via an IAM user and access keys:
-  1) Create a least-privilege S3 policy for your bucket. Use backend/s3_deploy_gha_policy.json as a template and replace YOUR_BUCKET_NAME with your actual bucket name. If your bucket has Object Ownership set to "Bucket owner enforced" (ACLs disabled), you may remove s3:PutObjectAcl from the policy.
+  1) Create a least-privilege S3 policy for your bucket. Use aws_config/s3_deploy_gha_policy.json as a template and replace YOUR_BUCKET_NAME with your actual bucket name. If your bucket has Object Ownership set to "Bucket owner enforced" (ACLs disabled), you may remove s3:PutObjectAcl from the policy.
      - IAM Console > Policies > Create policy > JSON > paste the updated JSON > Next > Create policy.
   2) Create an IAM user (e.g., github-actions-s3-deployer) and attach the policy:
      - IAM Console > Users > Create user > Name: github-actions-s3-deployer > Create user.
