@@ -19,6 +19,7 @@ Routes
 Repo structure
 - backend/authentication.py           (Lambda handler)
 - backend/ses_send_email_policy.json  (inline IAM policy allowing SES send)
+- backend/s3_deploy_gha_policy.json   (IAM policy template for S3 deploy via GitHub Actions)
 - database/create_database.sql        (schema)
 - frontend/                           (minimal S3-friendly UI: login.html, register.html, authentication.js, style.css)
 
@@ -131,11 +132,25 @@ This repo includes a workflow at .github/workflows/deploy-frontend.yml that depl
 Prerequisites
 - Create an S3 bucket and enable static website hosting (or front with CloudFront).
 - Ensure the bucket policy allows public read if you are hosting directly from S3 for a demo. For production, prefer CloudFront with an origin access identity and restrict the bucket.
-- In your GitHub repository Settings > Secrets and variables > Actions, add these secrets:
-  - AWS_ACCESS_KEY_ID
-  - AWS_SECRET_ACCESS_KEY
-  - AWS_REGION (e.g., us-east-2)
-  - S3_BUCKET (your bucket name)
+- Grant GitHub Actions access to your S3 bucket via an IAM user and access keys:
+  1) Create a least-privilege S3 policy for your bucket. Use backend/s3_deploy_gha_policy.json as a template and replace YOUR_BUCKET_NAME with your actual bucket name. If your bucket has Object Ownership set to "Bucket owner enforced" (ACLs disabled), you may remove s3:PutObjectAcl from the policy.
+     - IAM Console > Policies > Create policy > JSON > paste the updated JSON > Next > Create policy.
+  2) Create an IAM user (e.g., github-actions-s3-deployer) and attach the policy:
+     - IAM Console > Users > Create user > Name: github-actions-s3-deployer > Create user.
+     - Open the user > Permissions > Add permissions > Attach policies directly > select the policy you created > Add permissions.
+  3) Create access keys for the user:
+     - IAM Console > Users > github-actions-s3-deployer > Security credentials > Create access key.
+     - Choose "Application running outside AWS" and confirm. Copy the Access key ID and Secret access key.
+  4) Add the following GitHub Actions secrets in your repository (Settings > Secrets and variables > Actions):
+     - AWS_ACCESS_KEY_ID: the access key ID from step 3.
+     - AWS_SECRET_ACCESS_KEY: the secret access key from step 3.
+     - AWS_REGION: your AWS region (e.g., us-east-2).
+     - S3_BUCKET: your bucket name.
+
+Security notes
+- Keep access scoped to only the required bucket; do not use wildcard resources.
+- Rotate access keys regularly and remove unused ones.
+- For production, consider using OpenID Connect (OIDC) with aws-actions/configure-aws-credentials to assume an IAM role, eliminating long-lived access keys.
 
 How it works
 - Trigger: Pushes to main that change files under frontend/ (or the workflow file itself).
