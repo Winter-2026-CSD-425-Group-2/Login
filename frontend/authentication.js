@@ -2,9 +2,10 @@ const LAMBDA_URL = "https://c6eazcqlvr2qhx4pvphs3i3vza0olarb.lambda-url.us-east-
 
 let currentUsername = "";
 let currentPassword = "";
+let currentFlow = null; // "login" or "register"
 
-const login = () => auth("login");
-const register = () => auth("register");
+const login = () => { currentFlow = "login"; return auth("login"); };
+const register = () => { currentFlow = "register"; return auth("register"); };
 const verifyOtp = () => verify();
 
 function setMessage(text, success) {
@@ -67,22 +68,28 @@ function auth(route) {
   })
     .then(res => res.json())
     .then(async data => {
-      setMessage(data.message || "", !!data.success);
-
-      if (!data.success) {
+      if (route === "register") {
+        if (data.success) {
+          // Clearer messaging for registration flow
+          setMessage("We sent a verification code to your email. Enter it below to complete registration.", true);
+          showOtp(true);
+        } else {
+          const msg = (data.message || "").trim();
+          const friendly = msg.toLowerCase().includes("invalid username or password")
+            ? "Could not start registration with those details. If you already have an account, please use the Login page; otherwise choose a different username."
+            : (msg || "Registration failed");
+          setMessage(friendly, false);
+        }
         setLoading(false, route);
         return;
       }
 
-      if (route === "login") {
-        // Login triggers OTP via AWS SES; show OTP input.
+      // Login flow messaging remains unchanged
+      setMessage(data.message || "", !!data.success);
+      if (data.success) {
         showOtp(true);
-        setLoading(false, route);
-      } else if (route === "register") {
-        // Registration now sends OTP; show input to complete account creation.
-        showOtp(true);
-        setLoading(false, route);
       }
+      setLoading(false, route);
     })
     .catch(() => {
       setMessage("Server not reachable", false);
@@ -94,7 +101,10 @@ function verify() {
   const codeEl = document.getElementById("otp");
   const code = (codeEl?.value || "").trim();
   if (!currentUsername || !code) {
-    setMessage("Please enter your username/password and the OTP code.", false);
+    const guidance = currentFlow === "register"
+      ? "Please enter your username and password, then click Register to request a code. After you receive it, enter the OTP here."
+      : "Please enter your username and password, then click Login to request a code. After you receive it, enter the OTP here.";
+    setMessage(guidance, false);
     if (codeEl) codeEl.focus();
     return;
   }
@@ -108,6 +118,12 @@ function verify() {
   })
     .then(res => res.json())
     .then(data => {
+      // Keep server message but add clarity for registration
+      if (data.success && currentFlow === "register") {
+        setMessage(data.message || "Registration verified. You can now log in.", true);
+        showOtp(false);
+        return;
+      }
       setMessage(data.message || "", !!data.success);
       if (data.success) {
         showOtp(false);

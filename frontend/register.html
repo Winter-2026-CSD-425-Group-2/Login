@@ -14,11 +14,14 @@
 
       <label for="username">Username</label>
       <input type="text" id="username" name="username" autocomplete="username" required autofocus placeholder="Choose a username" />
+      <small>Use a valid email address so we can send you a verification code.</small>
 
       <label for="password">Password</label>
       <input type="password" id="password" name="password" autocomplete="new-password" required placeholder="Create a password" />
 
       <button id="authBtn" type="button" onclick="register()">Register</button>
+      <p class="helper">After you click Register, we'll email you a one-time code. Enter it below to finish creating your account.</p>
+      <p class="alt-action"><a href="login.html">Already have an account? Log in</a></p>
 
       <div id="otpSection" style="display:none; margin-top: 10px;">
         <label for="otp">OTP Code</label>
