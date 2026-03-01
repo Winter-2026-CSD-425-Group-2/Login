@@ -128,7 +128,19 @@ Default demo users (from the SQL seed file)
 - test / 12345
 - user / password
 
+Important limitations and production notes
+- OTP storage is in-memory inside the Lambda execution environment. If the function cold-starts or scales out, previously generated OTPs may be lost. For production, use a shared persistence layer (e.g., DynamoDB with TTL or ElastiCache/Redis) to store OTPs.
+- Passwords in the sample are stored in plaintext. In production, store password hashes only (e.g., bcrypt, scrypt, Argon2) and enforce strong password policies.
+- The Function URL setup uses public access (Auth type: NONE) for demo simplicity. In production, protect your endpoints with IAM or API Gateway + authorizers, and restrict CORS origins strictly.
+- Add rate limiting/abuse protections (e.g., throttle login and OTP requests, temporary lockouts, or CAPTCHA) to prevent brute-force and spam.
+- Avoid hardcoding secrets. Move DB and email config to environment variables or a secrets manager (AWS Secrets Manager/Parameter Store) and encrypt with KMS.
+- Ensure SES identities are verified and configure SPF/DKIM for better email deliverability.
+- Keep services in the same region when possible. If SES is in a different region, make sure AWS_REGION in the code matches the SES region you intend to use.
+
 Notes and troubleshooting
 - PyMySQL import errors: Ensure the layer zip has a top-level folder named python and that the layer is created for Python 3.14 and attached to the function.
 - Database connectivity: Verify security groups, subnets/VPC settings (if your Lambda runs in a VPC), and that DB_HOST/DB_USER/DB_PASSWORD/DB_NAME are correct. Check CloudWatch logs for errors.
 - SES sending issues: Verify SENDER_EMAIL in SES, confirm AWS_REGION matches the SES region, and that your account is out of sandbox or recipients are verified. Review CloudWatch logs for ses:SendEmail errors.
+- CORS errors from the browser: Make sure Function URL CORS is enabled with method POST and header Content-Type, and that your frontend uses the exact Function URL (including the trailing slash).
+- Layer/architecture mismatch: If you choose arm64 for the function, create an arm64-compatible layer or switch to x86_64 as shown above.
+- OTP not received: Check CloudWatch logs for SES errors, confirm the recipient is verified if your SES account is in sandbox, and check spam/junk folders.
