@@ -1,9 +1,9 @@
 AWS Lambda + S3 Login Demo with Email OTP (Python 3.14, MySQL via PyMySQL, AWS SES)
 
-Two-step authentication demo with email-based OTP. This repository now includes:
+Two-step authentication demo with email-based OTP. This repository includes:
 - A deployable AWS Lambda backend that connects to MySQL and sends OTP via SES
 - A minimal S3-hosted frontend
-- SQL files for creating and seeding the users table
+- SQL for creating the users table
 
 Overview of the auth flow
 1) Users register with a username and password (use a valid email address as the username for the AWS-backed flow). After successful registration, the frontend automatically initiates an OTP by calling /login and prompts the user to verify the code.
@@ -18,9 +18,9 @@ Routes
 
 Repo structure
 - backend/authentication.py           (Lambda handler)
-- database/create_database.sql        (schema + demo seed users)
+- backend/ses_send_email_policy.json  (inline IAM policy allowing SES send)
+- database/create_database.sql        (schema)
 - frontend/                           (minimal S3-friendly UI: login.html, register.html, authentication.js, style.css)
-- Database-Group2-Carolina/Database.sql and AWS Lwtech-Group2.session.sql (additional SQL examples)
 
 Frontend (S3-hosted, uses real AWS backend)
 - Location: frontend/
@@ -31,17 +31,17 @@ Prerequisites (for AWS deployment)
 - AWS account with permissions for Lambda, S3, SES, and (optionally) RDS MySQL.
 - A reachable MySQL database (Amazon RDS or other), and its endpoint/credentials.
 - Lambda runtime: Python 3.14.
-- AWS SES configured in your chosen region:
+- AWS SES configured in your region. This repo defaults to us-east-2:
   - Verify a sender email address (used as SENDER_EMAIL).
   - If your SES account is in the sandbox, verify recipient emails or request production access.
   - Attach an IAM role/policy to the Lambda with permission to call ses:SendEmail.
 
-1) Database: create schema and seed users
+1) Database: create schema
 - If you don’t already have a MySQL database, create an RDS MySQL instance and allow your Lambda to reach it (VPC config and security groups as needed).
-- Run database/create_database.sql on your database to create a users table and insert demo users. Note: The script creates a database named user_id. Either:
+- Run database/create_database.sql on your database to create the users table. Note: The script creates a database named user_id. Either:
   - Change DB_NAME in backend/authentication.py to user_id, or
   - Modify the SQL to match your chosen database name.
-- For email OTP to work in the AWS flow, usernames should be valid email addresses. The seed file includes demo usernames; register users with real email addresses for OTP testing.
+- For email OTP to work in the AWS flow, usernames should be valid email addresses.
 
 2) Package PyMySQL as a Lambda layer (Python 3.14)
 PyMySQL is not included in the Lambda runtime, so you must attach it via a Lambda layer compatible with Python 3.14.
@@ -76,8 +76,11 @@ B. Add the code and configuration
 - Update DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME near the top of that file to match your database.
 - Update SES config:
   - SENDER_EMAIL: Verified sender email address in SES.
-  - AWS_REGION: Region where SES is configured (e.g., us-east-1).
-- Ensure the Lambda's execution role has permission to call ses:SendEmail.
+  - AWS_REGION: This repo defaults to us-east-2. Keep this value or change it to the region where your SES is configured.
+- Grant the Lambda execution role permission to send email with SES. You can add the inline policy from backend/ses_send_email_policy.json:
+  - Lambda > Your function > Configuration > Permissions > Role name
+  - Add permissions > Create inline policy > JSON
+  - Paste the contents of backend/ses_send_email_policy.json and save.
 - Deploy the function.
 
 C. Attach the PyMySQL layer
@@ -119,7 +122,7 @@ curl -i -X POST "https://<your-function-url>/verify" \
 
 const LAMBDA_URL = "https://<id>.lambda-url.<region>.on.aws/";
 
-- Note: The LAMBDA_URL in the repository may point to a sample URL; replace it with your own.
+- Note: The LAMBDA_URL in this repository is already set to a working Function URL in us-east-2 for the maintainer's deployment. If you are setting up your own SES/Lambda, replace it with your own Function URL.
 - The provided pages include forms for register and login, an OTP input, and a Verify button that calls POST /verify. After registration, the page automatically triggers OTP via the login route so you can complete setup right away.
 
 Important limitations and production notes
@@ -129,12 +132,12 @@ Important limitations and production notes
 - Add rate limiting/abuse protections (e.g., throttle login and OTP requests, temporary lockouts, or CAPTCHA) to prevent brute-force and spam.
 - Avoid hardcoding secrets. Move DB and email config to environment variables or a secrets manager (AWS Secrets Manager/Parameter Store) and encrypt with KMS.
 - Ensure SES identities are verified and configure SPF/DKIM for better email deliverability.
-- Keep services in the same region when possible. If SES is in a different region, make sure AWS_REGION in the code matches the SES region you intend to use.
+- Keep services in the same region when possible. This repository defaults to us-east-2. If SES is in a different region, make sure AWS_REGION in the code matches the SES region you intend to use.
 
 Notes and troubleshooting
 - PyMySQL import errors: Ensure the layer zip has a top-level folder named python and that the layer is created for Python 3.14 and attached to the function.
 - Database connectivity: Verify security groups, subnets/VPC settings (if your Lambda runs in a VPC), and that DB_HOST/DB_USER/DB_PASSWORD/DB_NAME are correct. Check CloudWatch logs for errors.
-- SES sending issues: Verify SENDER_EMAIL in SES, confirm AWS_REGION matches the SES region, and that your account is out of sandbox or recipients are verified. Review CloudWatch logs for ses:SendEmail errors.
+- SES sending issues: Verify SENDER_EMAIL in SES, confirm AWS_REGION matches the SES region (default here is us-east-2), and that your account is out of sandbox or recipients are verified. Review CloudWatch logs for ses:SendEmail errors.
 - CORS errors from the browser: Make sure Function URL CORS is enabled with method POST and header Content-Type, and that your frontend uses the exact Function URL (including the trailing slash).
 - Layer/architecture mismatch: If you choose arm64 for the function, create an arm64-compatible layer or switch to x86_64 as shown above.
 - OTP not received: Check CloudWatch logs for SES errors, confirm the recipient is verified if your SES account is in sandbox, and check spam/junk folders.
