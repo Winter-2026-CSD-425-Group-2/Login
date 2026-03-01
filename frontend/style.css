@@ -1,3 +1,8 @@
+/* Ensure consistent box sizing so widths include padding and borders */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 body {
     font-family: Arial, sans-serif;
     background-color: #f2f2f2;
