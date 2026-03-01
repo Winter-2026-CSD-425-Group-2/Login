@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Website</title>
-  <link rel="stylesheet" href="style1.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
@@ -19,9 +19,8 @@
       <input type="password" id="password" name="password" autocomplete="new-password" required placeholder="Create a password" />
 
       <button id="authBtn" type="button" onclick="register()">Register</button>
-      <p class="alt-action"><a href="login.html">Already have an account? Log in</a></p>
 
-      <div id="otpSection">
+      <div id="otpSection" style="display:none; margin-top: 10px;">
         <label for="otp">OTP Code</label>
         <input type="text" id="otp" name="otp" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="Enter OTP code" />
         <button id="otpBtn" type="button" onclick="verifyOtp()">Verify OTP</button>
