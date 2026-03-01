@@ -49,7 +49,6 @@ Current defaults in this repo
 - If you don’t already have a MySQL database, create an RDS MySQL instance and allow your Lambda to reach it (VPC config and security groups as needed).
 - Run database/create_database.sql on your database to create the users table. The script creates a database named user_id and a users table with a UNIQUE username.
 - By default, backend/authentication.py uses DB_NAME=user_id to match the script. Adjust either the code or the SQL if you prefer a different database name.
-- Note: The sample schema sets username VARCHAR(30). If your email addresses may exceed 30 characters, increase this length before inserting users.
 - For email OTP to work in the AWS flow, usernames should be valid email addresses.
 
 2) Package PyMySQL as a Lambda layer (Python 3.14)
