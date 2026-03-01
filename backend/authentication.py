@@ -43,22 +43,16 @@ def build_response(status_code, body):
 def generate_code():
     return ''.join(random.choices(string.digits, k=6))
 
-def send_verification_email(to_email, code, purpose="login"):
-    subject = "Your OTP Code"
-    if purpose == "login":
-        subject = "Your Login OTP"
-        body_text = f"Your login OTP is {code}. It expires in 5 minutes."
-    else:
-        subject = "Complete Your Registration"
-        body_text = f"Use this code to complete your registration: {code}. It expires in 5 minutes."
-
+def send_verification_email(to_email, code):
     ses.send_email(
         Source=SENDER_EMAIL,
         Destination={"ToAddresses": [to_email]},
         Message={
-            "Subject": {"Data": subject},
+            "Subject": {"Data": "Your Login OTP"},
             "Body": {
-                "Text": {"Data": body_text}
+                "Text": {
+                    "Data": f"Your OTP is {code}. It expires in 5 minutes."
+                }
             },
         },
     )
@@ -102,23 +96,11 @@ def lambda_handler(event, context):
                 if existing_user:
                     return build_response(409, {"success": False, "message": "Username already exists"})
 
-                # Generate OTP for registration and store pending registration
-                code = generate_code()
-                expiry = datetime.now(timezone.utc) + timedelta(minutes=5)
+                insert_sql = "INSERT INTO users (username, password) VALUES (%s, %s)"
+                cursor.execute(insert_sql, (username, password))
+                conn.commit()
 
-                otp_store[username] = {
-                    "code": code,
-                    "expiry": expiry,
-                    "purpose": "register",
-                    "password": password
-                }
-
-                send_verification_email(username, code, purpose="register")
-
-                return build_response(200, {
-                    "success": True,
-                    "message": "OTP sent to email to complete registration"
-                })
+                return build_response(201, {"success": True, "message": "User created successfully"})
 
             elif path == "/login":
 
@@ -132,17 +114,16 @@ def lambda_handler(event, context):
                 if not user or password != user["password"]:
                     return build_response(401, {"success": False, "message": "Invalid username or password"})
 
-                # Generate OTP for login
+                # Generate OTP
                 code = generate_code()
                 expiry = datetime.now(timezone.utc) + timedelta(minutes=5)
 
                 otp_store[username] = {
                     "code": code,
-                    "expiry": expiry,
-                    "purpose": "login"
+                    "expiry": expiry
                 }
 
-                send_verification_email(username, code, purpose="login")
+                send_verification_email(username, code)
 
                 return build_response(200, {
                     "success": True,
@@ -167,33 +148,12 @@ def lambda_handler(event, context):
                 if datetime.now(timezone.utc) > stored["expiry"]:
                     return build_response(401, {"success": False, "message": "OTP expired"})
 
-                # Handle registration vs login verification
-                if stored.get("purpose") == "register":
-                    # Ensure username still doesn't exist
-                    check_sql = "SELECT id FROM users WHERE username=%s"
-                    cursor.execute(check_sql, (username,))
-                    existing_user = cursor.fetchone()
-                    if existing_user:
-                        del otp_store[username]
-                        return build_response(409, {"success": False, "message": "Username already exists"})
+                del otp_store[username]
 
-                    insert_sql = "INSERT INTO users (username, password) VALUES (%s, %s)"
-                    cursor.execute(insert_sql, (username, stored.get("password")))
-                    conn.commit()
-
-                    del otp_store[username]
-
-                    return build_response(201, {
-                        "success": True,
-                        "message": "Registration verified. Account created"
-                    })
-                else:
-                    # Login flow
-                    del otp_store[username]
-                    return build_response(200, {
-                        "success": True,
-                        "message": "Login verification successful"
-                    })
+                return build_response(200, {
+                    "success": True,
+                    "message": "Login successful"
+                })
 
             else:
                 return build_response(404, {"success": False, "message": "Route not found"})

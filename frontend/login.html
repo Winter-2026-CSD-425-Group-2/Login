@@ -8,27 +8,31 @@
 </head>
 <body>
 
+  
+
   <main>
-    <section class="login-section" aria-labelledby="login-heading">
-      <h2 id="login-heading">Login</h2>
+    <section class="login-section">
+      <h2>Login</h2>
 
-      <label for="username">Username</label>
-      <input type="text" id="username" name="username" autocomplete="username" required autofocus placeholder="Enter your username" />
+      <label>Username</label>
+      <input type="text" id="username" />
 
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password" autocomplete="current-password" required placeholder="Enter your password" />
+      <label>Password</label>
+      <input type="password" id="password" />
 
-      <button id="authBtn" type="button" onclick="login()">Login</button>
+      <button onclick="login()">Login</button>
 
       <div id="otpSection" style="display:none; margin-top: 10px;">
-        <label for="otp">OTP Code</label>
-        <input type="text" id="otp" name="otp" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="Enter OTP code" />
-        <button id="otpBtn" type="button" onclick="verifyOtp()">Verify OTP</button>
+        <label>OTP Code</label>
+        <input type="text" id="otp" />
+        <button onclick="verifyOtp()">Verify OTP</button>
       </div>
 
-      <p id="message" role="status" aria-live="polite"></p>
+      <p id="message"></p>
     </section>
   </main>
+
+
 
   <script src="authentication.js"></script>
 </body>
