@@ -2,7 +2,7 @@ AWS Lambda + S3 Login Demo with Email OTP (Python 3.14, MySQL via PyMySQL, AWS S
 
 Two-step authentication demo with email-based OTP. This repository now includes:
 - A deployable AWS Lambda backend that connects to MySQL and sends OTP via SES
-- Two frontend options: a minimal S3-hosted frontend and a local mock frontend for quick testing
+- A minimal S3-hosted frontend
 - SQL files for creating and seeding the users table
 
 Overview of the auth flow
@@ -20,19 +20,12 @@ Repo structure
 - backend/authentication.py           (Lambda handler)
 - database/create_database.sql        (schema + demo seed users)
 - frontend/                           (minimal S3-friendly UI: login.html, register.html, authentication.js, style.css)
-- index.html, signup.html             (standalone local mock UI with 2FA via mailto, no AWS required)
 - Database-Group2-Carolina/Database.sql and AWS Lwtech-Group2.session.sql (additional SQL examples)
 
-Frontend options
-Option A: Minimal S3 frontend (uses real AWS backend)
+Frontend (S3-hosted, uses real AWS backend)
 - Location: frontend/
 - Purpose: Simple register and login forms wired to your Lambda Function URL via frontend/authentication.js
-- Now includes an OTP input and Verify button. After registration, the page automatically triggers an OTP via the login route and prompts the user to verify.
-
-Option B: Local mock frontend (no AWS required)
-- Files: index.html and signup.html at the repo root
-- Behavior: Simulates register/login/OTP locally using localStorage and opens your email client via mailto for the mock OTP. This does NOT talk to the AWS backend and is intended for quick UI demo/testing.
-- To use: Open signup.html to create an account, then index.html to login and complete mock 2FA. To reset, clear browser localStorage.
+- Includes an OTP input and Verify button. After registration, the page automatically triggers an OTP via the login route and prompts the user to verify.
 
 Prerequisites (for AWS deployment)
 - AWS account with permissions for Lambda, S3, SES, and (optionally) RDS MySQL.
@@ -118,7 +111,7 @@ curl -i -X POST "https://<your-function-url>/verify" \
   -H "Content-Type: application/json" \
   -d '{"username":"user@example.com","code":"123456"}'
 
-4) Frontend: host on S3 (for Option A)
+4) Frontend: host on S3
 - Create an S3 bucket and enable static website hosting.
 - For a public demo, allow public read access (bucket policy). Restrict in production.
 - Upload the contents of the frontend/ folder (login.html, register.html, authentication.js, style.css) to the bucket root.
