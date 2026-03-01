@@ -1,4 +1,4 @@
-const LAMBDA_URL = "https://bgrsmxb6sncxgulfimnep5sz6y0mjbkv.lambda-url.us-east-2.on.aws/";
+const LAMBDA_URL = "https://c6eazcqlvr2qhx4pvphs3i3vza0olarb.lambda-url.us-east-2.on.aws/";
 
 let currentUsername = "";
 let currentPassword = "";
