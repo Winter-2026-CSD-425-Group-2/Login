@@ -3,12 +3,13 @@ import pymysql
 import boto3
 import random
 import string
+import os
 from datetime import datetime, timedelta, timezone
 
 # ================= CONFIGURATIONS =================
 DB_HOST = "database-group2-carolina.crwamwoa4769.us-east-2.rds.amazonaws.com"
 DB_USER = "admin"
-DB_PASSWORD = "placeholder"
+DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_NAME = "user_id"
 
 SENDER_EMAIL = "placeholder"
