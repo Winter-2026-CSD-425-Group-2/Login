@@ -16,18 +16,49 @@ function setMessage(text, success) {
 
 function showOtp(show) {
   const section = document.getElementById("otpSection");
-  if (section) section.style.display = show ? "block" : "none";
+  if (section) {
+    section.style.display = show ? "block" : "none";
+    if (show) {
+      const otpInput = document.getElementById("otp");
+      if (otpInput) otpInput.focus();
+    }
+  }
+}
+
+function setLoading(isLoading, target) {
+  const btn = target === "otp" ? document.getElementById("otpBtn") : document.getElementById("authBtn");
+  if (!btn) return;
+  btn.disabled = isLoading;
+  if (!btn.dataset.originalText) {
+    btn.dataset.originalText = btn.textContent;
+  }
+  let loadingText = "Please wait…";
+  if (target === "login") loadingText = "Logging in…";
+  else if (target === "register") loadingText = "Registering…";
+  else if (target === "otp") loadingText = "Verifying…";
+  btn.textContent = isLoading ? loadingText : btn.dataset.originalText;
 }
 
 function auth(route) {
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value;
+  const usernameEl = document.getElementById("username");
+  const passwordEl = document.getElementById("password");
+  const username = (usernameEl?.value || "").trim();
+  const password = passwordEl?.value || "";
 
   currentUsername = username;
   currentPassword = password;
 
   showOtp(false);
   setMessage("", true);
+
+  if (!username || !password) {
+    setMessage("Please enter both username and password.", false);
+    if (!username && usernameEl) usernameEl.focus();
+    else if (passwordEl) passwordEl.focus();
+    return;
+  }
+
+  setLoading(true, route);
 
   fetch(`${LAMBDA_URL}${route}`, {
     method: "POST",
@@ -38,39 +69,37 @@ function auth(route) {
     .then(async data => {
       setMessage(data.message || "", !!data.success);
 
-      if (!data.success) return;
+      if (!data.success) {
+        setLoading(false, route);
+        return;
+      }
 
       if (route === "login") {
         // Login triggers OTP via AWS SES; show OTP input.
         showOtp(true);
+        setLoading(false, route);
       } else if (route === "register") {
-        // After successful registration, automatically trigger login to send OTP.
-        setMessage("User created successfully. Sending OTP to your email...", true);
-        try {
-          const res2 = await fetch(`${LAMBDA_URL}login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: currentUsername, password: currentPassword })
-          });
-          const data2 = await res2.json();
-          setMessage(data2.message || "", !!data2.success);
-          if (data2.success) showOtp(true);
-        } catch (e) {
-          setMessage("Could not send OTP after registration", false);
-        }
+        // Registration now sends OTP; show input to complete account creation.
+        showOtp(true);
+        setLoading(false, route);
       }
     })
     .catch(() => {
       setMessage("Server not reachable", false);
+      setLoading(false, route);
     });
 }
 
 function verify() {
-  const code = document.getElementById("otp").value.trim();
+  const codeEl = document.getElementById("otp");
+  const code = (codeEl?.value || "").trim();
   if (!currentUsername || !code) {
     setMessage("Please enter your username/password and the OTP code.", false);
+    if (codeEl) codeEl.focus();
     return;
   }
+
+  setLoading(true, "otp");
 
   fetch(`${LAMBDA_URL}verify`, {
     method: "POST",
@@ -86,5 +115,6 @@ function verify() {
     })
     .catch(() => {
       setMessage("Server not reachable", false);
-    });
+    })
+    .finally(() => setLoading(false, "otp"));
 }
