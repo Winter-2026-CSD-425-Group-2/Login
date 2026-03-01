@@ -79,23 +79,9 @@ function auth(route) {
         showOtp(true);
         setLoading(false, route);
       } else if (route === "register") {
-        // After successful registration, automatically trigger login to send OTP.
-        setMessage("User created successfully. Sending OTP to your email...", true);
-        try {
-          setLoading(true, route);
-          const res2 = await fetch(`${LAMBDA_URL}login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: currentUsername, password: currentPassword })
-          });
-          const data2 = await res2.json();
-          setMessage(data2.message || "", !!data2.success);
-          if (data2.success) showOtp(true);
-        } catch (e) {
-          setMessage("Could not send OTP after registration", false);
-        } finally {
-          setLoading(false, route);
-        }
+        // Registration now sends OTP; show input to complete account creation.
+        showOtp(true);
+        setLoading(false, route);
       }
     })
     .catch(() => {
