@@ -122,12 +122,6 @@ const LAMBDA_URL = "https://<id>.lambda-url.<region>.on.aws/";
 - Note: The LAMBDA_URL in the repository may point to a sample URL; replace it with your own.
 - The provided pages include forms for register and login, an OTP input, and a Verify button that calls POST /verify. After registration, the page automatically triggers OTP via the login route so you can complete setup right away.
 
-Default demo users (from the SQL seed file)
-- student / 1234
-- admin / password123
-- test / 12345
-- user / password
-
 Important limitations and production notes
 - OTP storage is in-memory inside the Lambda execution environment. If the function cold-starts or scales out, previously generated OTPs may be lost. For production, use a shared persistence layer (e.g., DynamoDB with TTL or ElastiCache/Redis) to store OTPs.
 - Passwords in the sample are stored in plaintext. In production, store password hashes only (e.g., bcrypt, scrypt, Argon2) and enforce strong password policies.
