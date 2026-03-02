@@ -12,7 +12,7 @@ DB_USER = "admin"
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_NAME = "user_id"
 
-SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "placeholder")
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 AWS_REGION = "us-east-2"
 
 ses = boto3.client("ses", region_name=AWS_REGION)
