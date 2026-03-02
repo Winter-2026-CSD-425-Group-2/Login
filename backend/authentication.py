@@ -12,13 +12,14 @@ DB_USER = "admin"
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_NAME = "user_id"
 
-SENDER_EMAIL = "placeholder"
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "placeholder")
 AWS_REGION = "us-east-2"
 
 ses = boto3.client("ses", region_name=AWS_REGION)
 
 
 otp_store = {}
+reset_otp_store = {}
 
 
 def get_connection():
@@ -53,6 +54,20 @@ def send_verification_email(to_email, code):
             "Body": {
                 "Text": {
                     "Data": f"Your OTP is {code}. It expires in 5 minutes."
+                }
+            },
+        },
+    )
+
+def send_password_reset_email(to_email, code):
+    ses.send_email(
+        Source=SENDER_EMAIL,
+        Destination={"ToAddresses": [to_email]},
+        Message={
+            "Subject": {"Data": "Your Password Reset Code"},
+            "Body": {
+                "Text": {
+                    "Data": f"Your password reset code is {code}. It expires in 10 minutes."
                 }
             },
         },
@@ -155,6 +170,56 @@ def lambda_handler(event, context):
                     "success": True,
                     "message": "Verification successful"
                 })
+
+            elif path == "/request-password-reset":
+
+                if not email:
+                    return build_response(400, {"success": False, "message": "Missing email"})
+
+                # Ensure user exists
+                check_sql = "SELECT id FROM users WHERE email=%s"
+                cursor.execute(check_sql, (email,))
+                user = cursor.fetchone()
+                if not user:
+                    return build_response(404, {"success": False, "message": "Email not found"})
+
+                # Generate password reset code
+                code = generate_code()
+                expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
+                reset_otp_store[email] = {"code": code, "expiry": expiry}
+
+                # Send password reset email
+                send_password_reset_email(email, code)
+
+                return build_response(200, {"success": True, "message": "Password reset code sent to email"})
+
+            elif path == "/reset-password":
+
+                code = data.get("code")
+                new_password = data.get("newPassword")
+
+                if not email or not code or not new_password:
+                    return build_response(400, {"success": False, "message": "Missing email, code, or new password"})
+
+                stored = reset_otp_store.get(email)
+                if not stored:
+                    return build_response(401, {"success": False, "message": "No reset request found"})
+
+                if stored["code"] != code:
+                    return build_response(401, {"success": False, "message": "Invalid reset code"})
+
+                if datetime.now(timezone.utc) > stored["expiry"]:
+                    return build_response(401, {"success": False, "message": "Reset code expired"})
+
+                # Update the user's password
+                update_sql = "UPDATE users SET password=%s WHERE email=%s"
+                cursor.execute(update_sql, (new_password, email))
+                conn.commit()
+
+                # Clear the reset code
+                del reset_otp_store[email]
+
+                return build_response(200, {"success": True, "message": "Password has been reset successfully"})
 
             else:
                 return build_response(404, {"success": False, "message": "Route not found"})

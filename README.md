@@ -1,19 +1,22 @@
-AWS Lambda + S3 Login Demo with Email OTP (Python 3.14, MySQL via PyMySQL, AWS SES)
+AWS Lambda + S3 Login Demo with Email OTP + Password Reset (Python 3.14, MySQL via PyMySQL, AWS SES)
 
-Two-step authentication demo with email-based OTP. This repository includes:
+Two-step authentication demo with email-based OTP and a simple password reset flow. This repository includes:
 - A deployable AWS Lambda backend that connects to MySQL and sends OTP via SES
 - A minimal S3-hosted frontend
 - SQL for creating the users table
 
 Overview of the auth flow
-1) Users register with a username and password (use a valid email address as the username for the AWS-backed flow). After successful registration, the frontend automatically initiates an OTP by calling /login and prompts the user to verify the code.
+1) Users register with an email and password. After successful registration, the frontend automatically initiates an OTP by calling /login and prompts the user to verify the code.
 2) On login, the backend validates credentials and sends a 6-digit OTP to the user's email via AWS SES.
 3) The user completes login by submitting the OTP to the /verify route. The same OTP verification step is used immediately after registration.
+4) Forgot password: Users can request a password reset. The backend emails a 6-digit reset code, and users submit that code with a new password to complete the reset.
 
 Routes
-- POST /register: Create a new user (username must be an email for OTP delivery in the AWS flow).
+- POST /register: Create a new user (email must be a valid address for OTP delivery in the AWS flow).
 - POST /login: Validate credentials; on success, send a 6-digit OTP to the user's email.
 - POST /verify: Validate the OTP and finish the login.
+- POST /request-password-reset: Send a 6-digit reset code to the user's email if the account exists.
+- POST /reset-password: Validate the reset code and update the user's password.
 - OPTIONS: The Lambda handler returns 200 for preflight when forwarded; with Function URL CORS enabled, AWS also handles CORS automatically.
 
 Repo structure
@@ -22,13 +25,14 @@ Repo structure
 - aws_config/s3_deploy_gha_policy.json   (IAM policy template for S3 deploy via GitHub Actions)
 - aws_config/s3_public_read_bucket_policy.json (bucket policy template for public-read static website hosting)
 - database/create_database.sql        (schema + seed data)
-- frontend/                           (minimal S3-friendly UI: login.html, register.html, authentication.js, style.css)
+- frontend/                           (minimal S3-friendly UI: login.html, register.html, reset-password.html, authentication.js, style.css)
 - .github/workflows/deploy-frontend.yml (deploy frontend to S3 on pushes to main)
 
 Frontend (S3-hosted, uses real AWS backend)
 - Location: frontend/
-- Purpose: Simple register and login forms wired to your Lambda Function URL via frontend/authentication.js
+- Purpose: Simple register, login, and password reset pages wired to your Lambda Function URL via frontend/authentication.js
 - Includes an OTP input and Verify button. After registration, the page automatically triggers an OTP via the login route and prompts the user to verify.
+- A Reset Password page (reset-password.html) that requests a reset code and submits a new password using the routes below.
 
 Prerequisites (for AWS deployment)
 - AWS account with permissions for Lambda, S3, SES, and (optionally) RDS MySQL.
@@ -83,7 +87,7 @@ B. Add the code and configuration
 - In the Code tab, replace the default code with the contents of backend/authentication.py in this repo.
 - Update DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME near the top of that file to match your database.
 - Update SES config:
-  - SENDER_EMAIL: Verified sender email address in SES.
+  - SENDER_EMAIL: Set an environment variable SENDER_EMAIL to a verified sender email address in SES.
   - AWS_REGION: This repo defaults to us-east-2. Keep this value or change it to the region where your SES is configured.
 - Grant the Lambda execution role permission to send email with SES. You can add the inline policy from aws_config/ses_send_email_policy.json:
   - Lambda > Your function > Configuration > Permissions > Role name
@@ -104,23 +108,35 @@ D. Enable a public Function URL
 - Note the Function URL. It will look like: https://<id>.lambda-url.<region>.on.aws/
 
 E. Test the endpoints
-Register a user (use a valid email as the username):
+Register a user (use a valid email):
 
 curl -i -X POST "https://<your-function-url>/register" \
   -H "Content-Type: application/json" \
-  -d '{"username":"user@example.com","password":"newpass"}'
+  -d '{"email":"user@example.com","password":"newpass"}'
 
 Login (triggers OTP email):
 
 curl -i -X POST "https://<your-function-url>/login" \
   -H "Content-Type: application/json" \
-  -d '{"username":"user@example.com","password":"newpass"}'
+  -d '{"email":"user@example.com","password":"newpass"}'
 
 Verify the OTP (replace 123456 with the code from the email):
 
 curl -i -X POST "https://<your-function-url>/verify" \
   -H "Content-Type: application/json" \
-  -d '{"username":"user@example.com","code":"123456"}'
+  -d '{"email":"user@example.com","code":"123456"}'
+
+Request a password reset code:
+
+curl -i -X POST "https://<your-function-url>/request-password-reset" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com"}'
+
+Reset the password using the code (replace 654321 with the reset code):
+
+curl -i -X POST "https://<your-function-url>/reset-password" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","code":"654321","newPassword":"newerpass"}'
 
 4) Frontend: host on S3
 - Create an S3 bucket and enable static website hosting.
@@ -175,7 +191,7 @@ Notes
 - The workflow uses --delete to remove files in the bucket that are no longer present locally.
 
 Important limitations and production notes
-- OTP storage is in-memory inside the Lambda execution environment. If the function cold-starts or scales out, previously generated OTPs may be lost. For production, use a shared persistence layer (e.g., DynamoDB with TTL or ElastiCache/Redis) to store OTPs.
+- OTP and reset-code storage is in-memory inside the Lambda execution environment. If the function cold-starts or scales out, previously generated codes may be lost. For production, use a shared persistence layer (e.g., DynamoDB with TTL or ElastiCache/Redis) to store codes.
 - Passwords in the sample are stored in plaintext. In production, store password hashes only (e.g., bcrypt, scrypt, Argon2) and enforce strong password policies.
 - The Function URL setup uses public access (Auth type: NONE) for demo simplicity. In production, protect your endpoints with IAM or API Gateway + authorizers, and restrict CORS origins strictly.
 - Add rate limiting/abuse protections (e.g., throttle login and OTP requests, temporary lockouts, or CAPTCHA) to prevent brute-force and spam.
