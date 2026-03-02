@@ -45,33 +45,20 @@ def build_response(status_code, body):
 def generate_code():
     return ''.join(random.choices(string.digits, k=6))
 
-def send_verification_email(to_email, code):
+def send_otp_code(to_email, code):
     ses.send_email(
         Source=SENDER_EMAIL,
         Destination={"ToAddresses": [to_email]},
         Message={
-            "Subject": {"Data": "Your Login OTP"},
+            "Subject": {"Data": "Your One-Time Code"},
             "Body": {
                 "Text": {
-                    "Data": f"Your OTP is {code}. It expires in 5 minutes."
+                    "Data": f"Your one-time code is {code}. If you did not request this, you can ignore this email."
                 }
             },
         },
     )
 
-def send_password_reset_email(to_email, code):
-    ses.send_email(
-        Source=SENDER_EMAIL,
-        Destination={"ToAddresses": [to_email]},
-        Message={
-            "Subject": {"Data": "Your Password Reset Code"},
-            "Body": {
-                "Text": {
-                    "Data": f"Your password reset code is {code}. It expires in 10 minutes."
-                }
-            },
-        },
-    )
 
 def lambda_handler(event, context):
 
@@ -139,7 +126,7 @@ def lambda_handler(event, context):
                     "expiry": expiry
                 }
 
-                send_verification_email(email, code)
+                send_otp_code(email, code)
 
                 return build_response(200, {
                     "success": True,
@@ -189,7 +176,7 @@ def lambda_handler(event, context):
                 reset_otp_store[email] = {"code": code, "expiry": expiry}
 
                 # Send password reset email
-                send_password_reset_email(email, code)
+                send_otp_code(email, code)
 
                 return build_response(200, {"success": True, "message": "Password reset code sent to email"})
 
