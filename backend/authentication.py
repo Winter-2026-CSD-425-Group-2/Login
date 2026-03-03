@@ -19,7 +19,6 @@ ses = boto3.client("ses", region_name=AWS_REGION)
 
 
 otp_store = {}
-reset_otp_store = {}
 
 
 def get_connection():
@@ -173,7 +172,7 @@ def lambda_handler(event, context):
                 # Generate password reset code
                 code = generate_code()
                 expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
-                reset_otp_store[email] = {"code": code, "expiry": expiry}
+                otp_store[email] = {"code": code, "expiry": expiry}
 
                 # Send password reset email
                 send_otp_code(email, code)
@@ -188,7 +187,7 @@ def lambda_handler(event, context):
                 if not email or not code or not new_password:
                     return build_response(400, {"success": False, "message": "Missing email, code, or new password"})
 
-                stored = reset_otp_store.get(email)
+                stored = otp_store.get(email)
                 if not stored:
                     return build_response(401, {"success": False, "message": "No reset request found"})
 
@@ -204,7 +203,7 @@ def lambda_handler(event, context):
                 conn.commit()
 
                 # Clear the reset code
-                del reset_otp_store[email]
+                del otp_store[email]
 
                 return build_response(200, {"success": True, "message": "Password has been reset successfully"})
 
