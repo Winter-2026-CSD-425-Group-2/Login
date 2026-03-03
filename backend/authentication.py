@@ -171,7 +171,7 @@ def lambda_handler(event, context):
 
                 # Generate password reset code
                 code = generate_code()
-                expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
+                expiry = datetime.now(timezone.utc) + timedelta(minutes=5)
                 otp_store[email] = {"code": code, "expiry": expiry}
 
                 # Send password reset email
