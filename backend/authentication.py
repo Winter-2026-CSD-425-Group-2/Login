@@ -44,7 +44,16 @@ def build_response(status_code, body):
 def generate_code():
     return ''.join(random.choices(string.digits, k=6))
 
-def send_otp_code(to_email, code):
+def send_otp_code(to_email):
+    # Generate OTP
+    code = generate_code()
+    expiry = datetime.now(timezone.utc) + timedelta(minutes=5)
+
+    otp_store[to_email] = {
+        "code": code,
+        "expiry": expiry
+    }
+
     ses.send_email(
         Source=SENDER_EMAIL,
         Destination={"ToAddresses": [to_email]},
@@ -116,16 +125,7 @@ def lambda_handler(event, context):
                 if not user or password != user["password"]:
                     return build_response(401, {"success": False, "message": "Invalid email or password"})
 
-                # Generate OTP
-                code = generate_code()
-                expiry = datetime.now(timezone.utc) + timedelta(minutes=5)
-
-                otp_store[email] = {
-                    "code": code,
-                    "expiry": expiry
-                }
-
-                send_otp_code(email, code)
+                send_otp_code(email)
 
                 return build_response(200, {
                     "success": True,
@@ -169,13 +169,8 @@ def lambda_handler(event, context):
                 if not user:
                     return build_response(404, {"success": False, "message": "Email not found"})
 
-                # Generate password reset code
-                code = generate_code()
-                expiry = datetime.now(timezone.utc) + timedelta(minutes=5)
-                otp_store[email] = {"code": code, "expiry": expiry}
-
                 # Send password reset email
-                send_otp_code(email, code)
+                send_otp_code(email)
 
                 return build_response(200, {"success": True, "message": "Password reset code sent to email"})
 
