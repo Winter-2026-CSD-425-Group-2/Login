@@ -44,6 +44,7 @@ def build_response(status_code, body):
 def generate_code():
     return ''.join(random.choices(string.digits, k=6))
 
+
 def send_otp_code(to_email):
     # Generate OTP
     code = generate_code()
@@ -68,6 +69,33 @@ def send_otp_code(to_email):
     )
 
 
+def require_fields(data, fields, message):
+    """Return a 400 response if any required field is missing, otherwise None."""
+    if any(not data.get(f) for f in fields):
+        return build_response(400, {"success": False, "message": message})
+    return None
+
+
+def get_user_by_email(cursor, email):
+    sql = "SELECT id, password FROM users WHERE email=%s"
+    cursor.execute(sql, (email,))
+    return cursor.fetchone()
+
+
+def validate_otp(email, code, not_found_msg, invalid_msg, expired_msg, consume=True):
+    stored = otp_store.get(email)
+    if not stored:
+        return build_response(401, {"success": False, "message": not_found_msg})
+    if stored["code"] != code:
+        return build_response(401, {"success": False, "message": invalid_msg})
+    if datetime.now(timezone.utc) > stored["expiry"]:
+        return build_response(401, {"success": False, "message": expired_msg})
+    if consume:
+        del otp_store[email]
+    return None
+
+
+
 def lambda_handler(event, context):
 
     method = (
@@ -87,7 +115,6 @@ def lambda_handler(event, context):
         return build_response(400, {"success": False, "message": "Invalid JSON"})
 
     email = data.get("email")
-    password = data.get("password")
 
     conn = None
 
@@ -97,32 +124,28 @@ def lambda_handler(event, context):
 
             if path == "/register":
 
-                if not email or not password:
-                    return build_response(400, {"success": False, "message": "Missing email or password"})
+                missing = require_fields(data, ["email", "password"], "Missing email or password")
+                if missing:
+                    return missing
 
-                check_sql = "SELECT id FROM users WHERE email=%s"
-                cursor.execute(check_sql, (email,))
-                existing_user = cursor.fetchone()
-
+                existing_user = get_user_by_email(cursor, email)
                 if existing_user:
                     return build_response(409, {"success": False, "message": "Email already exists"})
 
                 insert_sql = "INSERT INTO users (email, password) VALUES (%s, %s)"
-                cursor.execute(insert_sql, (email, password))
+                cursor.execute(insert_sql, (email, data.get("password")))
                 conn.commit()
 
                 return build_response(201, {"success": True, "message": "User created successfully"})
 
             elif path == "/login":
 
-                if not email or not password:
-                    return build_response(400, {"success": False, "message": "Missing email or password"})
+                missing = require_fields(data, ["email", "password"], "Missing email or password")
+                if missing:
+                    return missing
 
-                sql = "SELECT password FROM users WHERE email=%s"
-                cursor.execute(sql, (email,))
-                user = cursor.fetchone()
-
-                if not user or password != user["password"]:
+                user = get_user_by_email(cursor, email)
+                if not user or data.get("password") != user.get("password"):
                     return build_response(401, {"success": False, "message": "Invalid email or password"})
 
                 send_otp_code(email)
@@ -134,23 +157,20 @@ def lambda_handler(event, context):
 
             elif path == "/verify":
 
-                code = data.get("code")
+                missing = require_fields(data, ["email", "code"], "Missing email or code")
+                if missing:
+                    return missing
 
-                if not email or not code:
-                    return build_response(400, {"success": False, "message": "Missing email or code"})
-
-                stored = otp_store.get(email)
-
-                if not stored:
-                    return build_response(401, {"success": False, "message": "No OTP found"})
-
-                if stored["code"] != code:
-                    return build_response(401, {"success": False, "message": "Invalid OTP"})
-
-                if datetime.now(timezone.utc) > stored["expiry"]:
-                    return build_response(401, {"success": False, "message": "OTP expired"})
-
-                del otp_store[email]
+                error = validate_otp(
+                    email,
+                    data.get("code"),
+                    not_found_msg="No OTP found",
+                    invalid_msg="Invalid OTP",
+                    expired_msg="OTP expired",
+                    consume=True,
+                )
+                if error:
+                    return error
 
                 return build_response(200, {
                     "success": True,
@@ -159,46 +179,38 @@ def lambda_handler(event, context):
 
             elif path == "/request-password-reset":
 
-                if not email:
-                    return build_response(400, {"success": False, "message": "Missing email"})
+                missing = require_fields(data, ["email"], "Missing email")
+                if missing:
+                    return missing
 
-                # Ensure user exists
-                check_sql = "SELECT id FROM users WHERE email=%s"
-                cursor.execute(check_sql, (email,))
-                user = cursor.fetchone()
+                user = get_user_by_email(cursor, email)
                 if not user:
                     return build_response(404, {"success": False, "message": "Email not found"})
 
-                # Send password reset email
                 send_otp_code(email)
 
                 return build_response(200, {"success": True, "message": "Password reset code sent to email"})
 
             elif path == "/reset-password":
 
-                code = data.get("code")
-                new_password = data.get("newPassword")
+                missing = require_fields(data, ["email", "code", "newPassword"], "Missing email, code, or new password")
+                if missing:
+                    return missing
 
-                if not email or not code or not new_password:
-                    return build_response(400, {"success": False, "message": "Missing email, code, or new password"})
+                error = validate_otp(
+                    email,
+                    data.get("code"),
+                    not_found_msg="No reset request found",
+                    invalid_msg="Invalid reset code",
+                    expired_msg="Reset code expired",
+                    consume=True,
+                )
+                if error:
+                    return error
 
-                stored = otp_store.get(email)
-                if not stored:
-                    return build_response(401, {"success": False, "message": "No reset request found"})
-
-                if stored["code"] != code:
-                    return build_response(401, {"success": False, "message": "Invalid reset code"})
-
-                if datetime.now(timezone.utc) > stored["expiry"]:
-                    return build_response(401, {"success": False, "message": "Reset code expired"})
-
-                # Update the user's password
                 update_sql = "UPDATE users SET password=%s WHERE email=%s"
-                cursor.execute(update_sql, (new_password, email))
+                cursor.execute(update_sql, (data.get("newPassword"), email))
                 conn.commit()
-
-                # Clear the reset code
-                del otp_store[email]
 
                 return build_response(200, {"success": True, "message": "Password has been reset successfully"})
 
