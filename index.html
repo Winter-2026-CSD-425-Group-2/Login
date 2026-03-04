@@ -452,6 +452,49 @@
             <button type="submit" class="login-button">Verify & Complete Login</button>
         </form>
 
+        <form id="requestResetForm" style="display: none; margin-top: 16px;">
+            <div class="form-group">
+                <label for="resetUsername">Username</label>
+                <div class="input-wrapper">
+                    <input type="text" id="resetUsername" name="resetUsername" placeholder="Enter your username" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="resetEmail">Email</label>
+                <div class="input-wrapper">
+                    <input type="email" id="resetEmail" name="resetEmail" placeholder="Enter your registered email" required>
+                </div>
+            </div>
+
+            <button type="submit" class="login-button">Send Password Reset Code</button>
+        </form>
+
+        <form id="resetPasswordForm" style="display: none; margin-top: 16px;">
+            <div class="form-group">
+                <label for="resetCode">Reset Code</label>
+                <div class="input-wrapper">
+                    <input type="text" id="resetCode" name="resetCode" placeholder="Enter the 6-digit reset code" maxlength="6" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="newPassword">New Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="newPassword" name="newPassword" placeholder="Enter new password" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmNewPassword">Confirm New Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="confirmNewPassword" name="confirmNewPassword" placeholder="Confirm new password" required>
+                </div>
+            </div>
+
+            <button type="submit" class="login-button">Reset Password</button>
+        </form>
+
         <div class="signup-link">
             Don't have an account? <a href="signup.html">Sign up here</a>
         </div>
@@ -459,74 +502,161 @@
 
     <script>
         const VERIFICATION_CODE_KEY = 'pending2FA';
+        const PASSWORD_RESET_KEY = 'pendingPasswordReset';
 
         const loginForm = document.getElementById('loginForm');
         const verifyForm = document.getElementById('verifyForm');
+        const requestResetForm = document.getElementById('requestResetForm');
+        const resetPasswordForm = document.getElementById('resetPasswordForm');
         const usernameInput = document.getElementById('username');
         const passwordInput = document.getElementById('password');
         const verificationCodeInput = document.getElementById('verificationCode');
+        const forgotPasswordLink = document.querySelector('.forgot-password');
+        const resetUsernameInput = document.getElementById('resetUsername');
+        const resetEmailInput = document.getElementById('resetEmail');
+        const resetCodeInput = document.getElementById('resetCode');
+        const newPasswordInput = document.getElementById('newPassword');
+        const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
         const loginButton = loginForm.querySelector('button[type="submit"]');
         const errorMessage = document.getElementById('errorMessage');
         const successMessage = document.getElementById('successMessage');
+        let isResetMode = false;
+
+        function getRegisteredUsers() {
+            return JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        }
+
+        function saveRegisteredUsers(users) {
+            localStorage.setItem('registeredUsers', JSON.stringify(users));
+        }
+
+        function createCodeWithExpiry() {
+            return {
+                code: String(Math.floor(100000 + Math.random() * 900000)),
+                expiresAt: Date.now() + (5 * 60 * 1000)
+            };
+        }
+
+        function normalizeCodeInput(value) {
+            return String(value || '').replace(/\D/g, '').slice(0, 6);
+        }
+
+        function handleLoginRoute(payload) {
+            const users = getRegisteredUsers();
+            const user = users.find(savedUser => savedUser.username === payload.username && savedUser.password === payload.password);
+
+            if (!user) {
+                throw new Error('Invalid username or password!');
+            }
+
+            if (!user.email) {
+                throw new Error('This account does not have an email for verification. Please register again.');
+            }
+
+            const existingPending = JSON.parse(localStorage.getItem(VERIFICATION_CODE_KEY) || 'null');
+            if (existingPending && existingPending.username === user.username && Date.now() <= existingPending.expiresAt) {
+                return { message: 'A verification code is already active', username: user.username, reused: true };
+            }
+
+            const { code, expiresAt } = createCodeWithExpiry();
+            localStorage.setItem(VERIFICATION_CODE_KEY, JSON.stringify({ username: user.username, email: user.email, code, expiresAt }));
+
+            return { message: 'Verification code generated', username: user.username, email: user.email, code, expiresAt };
+        }
+
+        function handleVerifyOtpRoute(payload) {
+            const pendingVerification = JSON.parse(localStorage.getItem(VERIFICATION_CODE_KEY) || 'null');
+            const enteredCode = normalizeCodeInput(payload.code);
+
+            if (!pendingVerification) {
+                throw new Error('No pending verification code found. Please login again.');
+            }
+
+            if (Date.now() > pendingVerification.expiresAt) {
+                localStorage.removeItem(VERIFICATION_CODE_KEY);
+                throw new Error('Verification code expired. Please login again to get a new code.');
+            }
+
+            if (pendingVerification.username !== payload.username || enteredCode !== pendingVerification.code) {
+                throw new Error('Invalid verification code!');
+            }
+
+            localStorage.setItem('loggedInUser', pendingVerification.username);
+            localStorage.removeItem(VERIFICATION_CODE_KEY);
+            return { message: '2FA verified', username: pendingVerification.username };
+        }
+
+        function handleRequestResetRoute(payload) {
+            const users = getRegisteredUsers();
+            const user = users.find(savedUser => savedUser.username === payload.username && savedUser.email === payload.email);
+
+            if (!user) {
+                throw new Error('No account matches that username and email.');
+            }
+
+            const existingReset = JSON.parse(localStorage.getItem(PASSWORD_RESET_KEY) || 'null');
+            if (existingReset && existingReset.username === user.username && Date.now() <= existingReset.expiresAt) {
+                return {
+                    message: 'A reset code is already active',
+                    username: user.username,
+                    email: user.email,
+                    code: existingReset.code,
+                    reused: true
+                };
+            }
+
+            const { code, expiresAt } = createCodeWithExpiry();
+            localStorage.setItem(PASSWORD_RESET_KEY, JSON.stringify({ username: user.username, email: user.email, code, expiresAt }));
+
+            return { message: 'Reset code generated', username: user.username, email: user.email, code, expiresAt };
+        }
+
+        function handleResetPasswordRoute(payload) {
+            const pendingReset = JSON.parse(localStorage.getItem(PASSWORD_RESET_KEY) || 'null');
+            const enteredCode = normalizeCodeInput(payload.code);
+
+            if (!pendingReset) {
+                throw new Error('No pending password reset found. Please request a new code.');
+            }
+
+            if (Date.now() > pendingReset.expiresAt) {
+                localStorage.removeItem(PASSWORD_RESET_KEY);
+                throw new Error('Password reset code expired. Please request a new code.');
+            }
+
+            if (pendingReset.username !== payload.username || enteredCode !== pendingReset.code) {
+                throw new Error('Invalid password reset code!');
+            }
+
+            const users = getRegisteredUsers();
+            const userIndex = users.findIndex(savedUser => savedUser.username === pendingReset.username && savedUser.email === pendingReset.email);
+
+            if (userIndex === -1) {
+                throw new Error('Account not found for password reset.');
+            }
+
+            users[userIndex].password = payload.newPassword;
+            users[userIndex].updatedAt = new Date().toISOString();
+            saveRegisteredUsers(users);
+            localStorage.removeItem(PASSWORD_RESET_KEY);
+
+            return { message: 'Password reset successful', username: pendingReset.username };
+        }
+
+        const routeHandlers = {
+            '/login': handleLoginRoute,
+            '/verify-otp': handleVerifyOtpRoute,
+            '/request-password-reset': handleRequestResetRoute,
+            '/reset-password': handleResetPasswordRoute
+        };
 
         const mockLambdaApi = {
             async invoke(route, payload) {
-                if (route === '/login') {
-                    const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-                    const user = users.find(savedUser => savedUser.username === payload.username && savedUser.password === payload.password);
-
-                    if (!user) {
-                        throw new Error('Invalid username or password!');
-                    }
-
-                    if (!user.email) {
-                        throw new Error('This account does not have an email for verification. Please register again.');
-                    }
-
-                    const existingPending = JSON.parse(localStorage.getItem(VERIFICATION_CODE_KEY) || 'null');
-                    if (
-                        existingPending &&
-                        existingPending.username === user.username &&
-                        Date.now() <= existingPending.expiresAt
-                    ) {
-                        return { message: 'A verification code is already active', username: user.username, reused: true };
-                    }
-
-                    const code = String(Math.floor(100000 + Math.random() * 900000));
-                    const expiresAt = Date.now() + (5 * 60 * 1000);
-
-                    localStorage.setItem(VERIFICATION_CODE_KEY, JSON.stringify({
-                        username: user.username,
-                        email: user.email,
-                        code,
-                        expiresAt
-                    }));
-
-                    return { message: 'Verification code generated', username: user.username, email: user.email, code, expiresAt };
+                const handler = routeHandlers[route];
+                if (!handler) {
+                    throw new Error('Route not implemented in mock Lambda');
                 }
-
-                if (route === '/verify-otp') {
-                    const pendingVerification = JSON.parse(localStorage.getItem(VERIFICATION_CODE_KEY) || 'null');
-
-                    if (!pendingVerification) {
-                        throw new Error('No pending verification code found. Please login again.');
-                    }
-
-                    if (Date.now() > pendingVerification.expiresAt) {
-                        localStorage.removeItem(VERIFICATION_CODE_KEY);
-                        throw new Error('Verification code expired. Please login again to get a new code.');
-                    }
-
-                    if (pendingVerification.username !== payload.username || String(payload.code).trim() !== pendingVerification.code) {
-                        throw new Error('Invalid verification code!');
-                    }
-
-                    localStorage.setItem('loggedInUser', pendingVerification.username);
-                    localStorage.removeItem(VERIFICATION_CODE_KEY);
-                    return { message: '2FA verified', username: pendingVerification.username };
-                }
-
-                throw new Error('Route not implemented in mock Lambda');
+                return handler(payload);
             }
         };
 
@@ -549,14 +679,22 @@
             errorMessage.style.display = 'none';
         }
 
-        function generateVerificationCode() {
-            return String(Math.floor(100000 + Math.random() * 900000));
+        function openMailClient(toEmail, subjectText, bodyText) {
+            const mailtoUrl = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subjectText)}&body=${encodeURIComponent(bodyText)}`;
+            const mailLink = document.createElement('a');
+            mailLink.href = mailtoUrl;
+            mailLink.style.display = 'none';
+            document.body.appendChild(mailLink);
+            mailLink.click();
+            document.body.removeChild(mailLink);
         }
 
         function sendVerificationCodeByEmail(email, code) {
-            const subject = encodeURIComponent('Your Group2 Login Verification Code');
-            const body = encodeURIComponent(`Your verification code is ${code}. This code expires in 5 minutes.`);
-            window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+            openMailClient(email, 'Your Group2 Login Verification Code', `Your verification code is ${code}. This code expires in 5 minutes.`);
+        }
+
+        function sendPasswordResetCodeByEmail(email, code) {
+            openMailClient(email, 'Your Group2 Password Reset Code', `Your password reset code is ${code}. This code expires in 5 minutes.`);
         }
 
         function setLoginFormEnabled(enabled) {
@@ -566,6 +704,31 @@
             loginButton.style.opacity = enabled ? '1' : '0.7';
             loginButton.style.cursor = enabled ? 'pointer' : 'not-allowed';
         }
+
+        forgotPasswordLink.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            isResetMode = !isResetMode;
+
+            if (isResetMode) {
+                localStorage.removeItem(VERIFICATION_CODE_KEY);
+                verifyForm.style.display = 'none';
+                setLoginFormEnabled(true);
+                requestResetForm.style.display = 'block';
+                resetPasswordForm.style.display = 'none';
+                forgotPasswordLink.textContent = 'Cancel reset';
+                showSuccess('✓ Enter your username and email to request a password reset code.');
+                return;
+            }
+
+            requestResetForm.style.display = 'none';
+            resetPasswordForm.style.display = 'none';
+            requestResetForm.reset();
+            resetPasswordForm.reset();
+            forgotPasswordLink.textContent = 'Forgot Password?';
+            successMessage.style.display = 'none';
+            errorMessage.style.display = 'none';
+        });
 
         // Handle form submission
         loginForm.addEventListener('submit', async function(e) {
@@ -603,8 +766,9 @@
         verifyForm.addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const enteredCode = verificationCodeInput.value.trim();
+            const enteredCode = normalizeCodeInput(verificationCodeInput.value);
             const username = usernameInput.value.trim();
+            verificationCodeInput.value = enteredCode;
 
             try {
                 const result = await mockLambdaApi.invoke('/verify-otp', { username, code: enteredCode });
@@ -626,8 +790,82 @@
             }
         });
 
+        requestResetForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const username = resetUsernameInput.value.trim();
+            const email = resetEmailInput.value.trim().toLowerCase();
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!username || !email) {
+                showError('✗ Please enter username and email.');
+                return;
+            }
+
+            if (!emailPattern.test(email)) {
+                showError('✗ Please enter a valid email address.');
+                return;
+            }
+
+            try {
+                const result = await mockLambdaApi.invoke('/request-password-reset', { username, email });
+                sendPasswordResetCodeByEmail(result.email, result.code);
+                resetPasswordForm.style.display = 'block';
+                resetCodeInput.focus();
+
+                if (result.reused) {
+                    showSuccess('✓ A password reset code was already sent. Enter it below.');
+                    return;
+                }
+
+                showSuccess('✓ Password reset code prepared in your email client. Enter it below.');
+            } catch (error) {
+                showError(`✗ ${error.message}`);
+            }
+        });
+
+        resetPasswordForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const username = resetUsernameInput.value.trim();
+            const code = normalizeCodeInput(resetCodeInput.value);
+            const newPassword = newPasswordInput.value;
+            const confirmNewPassword = confirmNewPasswordInput.value;
+            resetCodeInput.value = code;
+
+            if (!username || !code || !newPassword || !confirmNewPassword) {
+                showError('✗ Please fill in all reset fields.');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showError('✗ New password must be at least 6 characters long.');
+                return;
+            }
+
+            if (newPassword !== confirmNewPassword) {
+                showError('✗ New passwords do not match.');
+                return;
+            }
+
+            try {
+                await mockLambdaApi.invoke('/reset-password', { username, code, newPassword });
+                showSuccess('✓ Password reset successful! You can login with your new password.');
+                requestResetForm.reset();
+                resetPasswordForm.reset();
+                requestResetForm.style.display = 'none';
+                resetPasswordForm.style.display = 'none';
+                forgotPasswordLink.textContent = 'Forgot Password?';
+                isResetMode = false;
+                usernameInput.value = username;
+                passwordInput.focus();
+            } catch (error) {
+                showError(`✗ ${error.message}`);
+            }
+        });
+
         // Add input focus effects
-        const inputs = document.querySelectorAll('input[type="text"], input[type="password"]');
+        const inputs = document.querySelectorAll('input[type="text"], input[type="password"], input[type="email"]');
         inputs.forEach(input => {
             input.addEventListener('focus', function() {
                 this.parentElement.parentElement.style.transform = 'scale(1.02)';
@@ -636,6 +874,14 @@
             input.addEventListener('blur', function() {
                 this.parentElement.parentElement.style.transform = 'scale(1)';
             });
+        });
+
+        verificationCodeInput.addEventListener('input', function() {
+            this.value = normalizeCodeInput(this.value);
+        });
+
+        resetCodeInput.addEventListener('input', function() {
+            this.value = normalizeCodeInput(this.value);
         });
     </script>
 </body>
