@@ -82,14 +82,18 @@ def get_user_by_email(cursor, email):
     return cursor.fetchone()
 
 
-def validate_otp(email, code, not_found_msg, invalid_msg, expired_msg, consume=True):
+def validate_otp(email, code, consume=True):
+    """Validate an OTP with a single catch-all error message.
+
+    Returns a 401 response with a unified message if:
+    - No OTP is found for the email
+    - The code does not match
+    - The OTP has expired
+    Otherwise returns None and optionally consumes the OTP.
+    """
     stored = otp_store.get(email)
-    if not stored:
-        return build_response(401, {"success": False, "message": not_found_msg})
-    if stored["code"] != code:
-        return build_response(401, {"success": False, "message": invalid_msg})
-    if datetime.now(timezone.utc) > stored["expiry"]:
-        return build_response(401, {"success": False, "message": expired_msg})
+    if not stored or stored["code"] != code or datetime.now(timezone.utc) > stored["expiry"]:
+        return build_response(401, {"success": False, "message": "Invalid or expired OTP"})
     if consume:
         del otp_store[email]
     return None
@@ -164,9 +168,6 @@ def lambda_handler(event, context):
                 error = validate_otp(
                     email,
                     data.get("code"),
-                    not_found_msg="No OTP found",
-                    invalid_msg="Invalid OTP",
-                    expired_msg="OTP expired",
                     consume=True,
                 )
                 if error:
@@ -200,9 +201,6 @@ def lambda_handler(event, context):
                 error = validate_otp(
                     email,
                     data.get("code"),
-                    not_found_msg="No reset request found",
-                    invalid_msg="Invalid reset code",
-                    expired_msg="Reset code expired",
                     consume=True,
                 )
                 if error:
