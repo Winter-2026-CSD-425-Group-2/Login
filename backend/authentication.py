@@ -77,8 +77,7 @@ def require_fields(data, fields, message):
 
 
 def get_user_by_email(cursor, email):
-    sql = "SELECT id, password FROM users WHERE email=%s"
-    cursor.execute(sql, (email,))
+    cursor.execute("SELECT password FROM users WHERE email=%s", (email,))
     return cursor.fetchone()
 
 
@@ -140,7 +139,10 @@ def lambda_handler(event, context):
                 cursor.execute(insert_sql, (email, data.get("password")))
                 conn.commit()
 
-                return build_response(201, {"success": True, "message": "User created successfully"})
+                # Send OTP immediately after successful registration
+                send_otp_code(email)
+
+                return build_response(201, {"success": True, "message": "User created successfully. OTP sent to email"})
 
             elif path == "/login":
 
